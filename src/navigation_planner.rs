@@ -460,7 +460,7 @@ mod tests {
 
     fn setup() -> (Env, Address, Address) {
         let env = Env::default();
-        let contract_id = env.register_contract(None, Stub);
+        let contract_id = env.register(Stub, ());
         let admin = Address::generate(&env);
         (env, contract_id, admin)
     }

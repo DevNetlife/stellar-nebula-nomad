@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use soroban_sdk::testutils::{Address as _, Events, Ledger, LedgerInfo};
-use soroban_sdk::{symbol_short, vec, Address, Bytes, BytesN, Env, IntoVal, String, Vec};
+use soroban_sdk::{symbol_short, vec, Address, Bytes, BytesN, Env, String, Vec};
 use stellar_nebula_nomad::{
     Blueprint, BlueprintError, BlueprintRarity, CellType, NebulaCell, NebulaLayout,
     NebulaNomadContract, NebulaNomadContractClient, ProfileError, ProgressUpdate, Rarity,
@@ -24,10 +24,34 @@ fn setup_env() -> (Env, NebulaNomadContractClient<'static>, Address) {
         min_persistent_entry_ttl: 1000,
         max_entry_ttl: 10_000,
     });
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let player = Address::generate(&env);
     (env, client, player)
+}
+
+/// Number of contract events emitted so far.
+fn event_count(env: &Env) -> usize {
+    env.events().all().events().len()
+}
+
+/// Symbol topics of the event at `index`, or `None` when it is missing.
+fn event_topics(env: &Env, index: usize) -> Option<Vec<std::string::String>> {
+    let events = env.events().all();
+    let event = events.events().get(index)?;
+    let soroban_sdk::xdr::ContractEventBody::V0(body) = &event.body;
+    body.topics
+        .iter()
+        .map(|topic| match topic {
+            soroban_sdk::xdr::ScVal::Symbol(s) => {
+                let bytes: &[u8] = s.as_ref();
+                std::str::from_utf8(bytes)
+                    .ok()
+                    .map(std::string::ToString::to_string)
+            }
+            _ => None,
+        })
+        .collect()
 }
 
 // ─── generate_nebula_layout ───────────────────────────────────────────────
@@ -75,7 +99,7 @@ fn test_different_seeds_produce_different_layouts() {
 fn test_layout_changes_with_ledger_state() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let player = Address::generate(&env);
     let seed = BytesN::from_array(&env, &[5u8; 32]);
@@ -260,15 +284,13 @@ fn test_scan_nebula_emits_event() {
     let seed = BytesN::from_array(&env, &[77u8; 32]);
     let _result = client.scan_nebula(&seed, &player);
 
-    let events = env.events().all();
     assert!(
-        !events.is_empty(),
+        event_count(&env) > 0,
         "Expected NebulaScanned event to be emitted"
     );
 
     // Verify the last event has the correct topics
-    let last = events.get(events.len() - 1).unwrap();
-    let (_contract_addr, topics, _data) = last;
+    let topics = event_topics(&env, event_count(&env) - 1).unwrap();
     assert_eq!(topics.len(), 2);
 }
 
@@ -498,10 +520,12 @@ fn test_transfer_ship_updates_ownership_tracking_and_emits_event() {
     assert_eq!(new_owner_ships.len(), 1);
     assert_eq!(new_owner_ships.get(0).unwrap(), ship.id);
 
-    let events = env.events().all();
-    let (_, topics, _) = events.get(events.len() - 2).unwrap();
-    assert_eq!(topics.get(0).unwrap(), symbol_short!("ship").into_val(&env));
-    assert_eq!(topics.get(1).unwrap(), symbol_short!("transfer").into_val(&env));
+    let topics = event_topics(&env, event_count(&env) - 2).unwrap();
+    assert_eq!(topics.get(0).map(std::string::String::as_str), Some("ship"));
+    assert_eq!(
+        topics.get(1).map(std::string::String::as_str),
+        Some("transfer")
+    );
 }
 
 #[test]
@@ -558,8 +582,7 @@ fn test_harvest_resources_single_invocation_and_events() {
     let harvest = client.harvest_resources(&ship.id, &layout);
     assert_eq!(harvest.ship_id, ship.id);
     assert!(harvest.total_harvested > 0);
-    let events = env.events().all();
-    assert!(!events.is_empty());
+    assert!(event_count(&env) > 0);
 }
 
 #[test]
@@ -961,8 +984,7 @@ fn test_batch_update_exceeds_limit_panics() {
 fn test_profile_emits_nomad_joined_event() {
     let (env, client, player) = setup_env();
     client.initialize_profile(&player);
-    let events = env.events().all();
-    assert!(!events.is_empty());
+    assert!(event_count(&env) > 0);
 }
 
 // ─── Session manager tests ────────────────────────────────────────────────
@@ -1036,8 +1058,7 @@ fn test_expire_already_expired_session_panics() {
 fn test_session_emits_started_event() {
     let (env, client, player) = setup_env();
     client.start_session(&player, &1u64);
-    let events = env.events().all();
-    assert!(!events.is_empty());
+    assert!(event_count(&env) > 0);
 }
 
 // ─── Blueprint factory tests ──────────────────────────────────────────────
@@ -1233,8 +1254,7 @@ fn test_referral_emits_registered_event() {
     let (env, client, referrer) = setup_env();
     let new_nomad = Address::generate(&env);
     client.register_referral(&referrer, &new_nomad);
-    let events = env.events().all();
-    assert!(!events.is_empty());
+    assert!(event_count(&env) > 0);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1285,8 +1305,10 @@ fn test_economy_to_market_full_flow() {
     assert!(harvest_result.total_harvested > 0);
 
     // Step 7: Events should have been emitted for both harvest and DEX listing
-    let events = env.events().all();
-    assert!(events.len() >= 2, "Should have harvest + DEX listing events");
+    assert!(
+        event_count(&env) >= 2,
+        "Should have harvest + DEX listing events"
+    );
 }
 
 #[test]
@@ -1396,8 +1418,7 @@ fn test_ship_upgrade_improves_capabilities() {
     client.apply_upgrade(&player, &ship.id, &symbol_short!("hull"));
 
     // The ship's state should reflect the upgrade
-    let events = env.events().all();
-    assert!(!events.is_empty(), "Upgrade should emit events");
+    assert!(event_count(&env) > 0, "Upgrade should emit events");
 }
 
 #[test]
@@ -1498,9 +1519,11 @@ fn test_social_to_fiscal_governance_full_flow() {
     client.cast_vote(&member2, &proposal_id, &false, &vote_weight_against);
 
     // Step 9: Verify events were emitted throughout the flow
-    let events = env.events().all();
     // Should have: alliance founded + 2 joins + 2 contributions + 1 proposal + 3 votes
-    assert!(events.len() >= 9, "Should have emitted events for all governance actions");
+    assert!(
+        event_count(&env) >= 9,
+        "Should have emitted events for all governance actions"
+    );
 }
 
 #[test]

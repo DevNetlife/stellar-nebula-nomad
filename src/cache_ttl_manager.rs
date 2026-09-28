@@ -202,7 +202,7 @@ pub fn is_cache_valid(env: &Env, namespace: Symbol, key: Symbol) -> bool {
     let cached: Option<CachedData> = env
         .storage()
         .persistent()
-        .get(&CacheKey::CacheEntry(namespace, key));
+        .get(&CacheKey::CacheEntry(namespace.clone(), key.clone()));
 
     match cached {
         None => false,
@@ -278,7 +278,7 @@ pub fn invalidate_namespace(
 
 /// Automatic cleanup of expired entries (called periodically).
 pub fn clear_stale_entries(env: &Env, namespace: Symbol) -> u32 {
-    let mut cleared = 0u32;
+    let cleared = 0u32;
 
     // In a real implementation, iterate through all entries in the namespace
     // and remove those where age > ttl_seconds. For this example, we track
@@ -351,7 +351,7 @@ pub fn detect_stale_data(env: &Env, namespace: Symbol, key: Symbol) -> bool {
 }
 
 /// Get cache statistics (for monitoring).
-pub fn get_cache_stats(env: &Env, namespace: Symbol) -> (u32, u32) {
+pub fn get_cache_stats(_env: &Env, namespace: Symbol) -> (u32, u32) {
     // Returns (total_entries, stale_entries).
     // In a real implementation, this would iterate and count.
     // For now, return placeholder values.

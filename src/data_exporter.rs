@@ -320,13 +320,9 @@ pub fn batch_export_players(env: &Env, limit: u32) -> Result<Vec<ExportRecord>, 
 
     while index < registry.len() && produced < limit {
         if let Some(profile_id) = registry.get(index) {
-            if let Some(profile) = env
-                .storage()
-                .persistent()
-                .get::<crate::player_profile::ProfileKey, crate::player_profile::PlayerProfile>(
-                    &crate::player_profile::ProfileKey::Profile(profile_id),
-                )
-            {
+            // Only the identity section is loaded — the payload builder does
+            // not need counters or streaks.
+            if let Ok(profile) = crate::player_profile::get_profile_core(env, profile_id) {
                 let settings = load_settings(env, profile_id);
                 if settings.enabled {
                     let payload = build_payload(env, &profile.owner, profile_id, &settings)?;

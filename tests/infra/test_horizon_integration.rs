@@ -8,7 +8,7 @@
 //!   - Event-stream subscription and cancellation
 
 use soroban_sdk::testutils::{Address as _, Events};
-use soroban_sdk::{Env, IntoVal, String};
+use soroban_sdk::{Env, String};
 use stellar_nebula_nomad::integrations::horizon_client::{
     emit_tx_for_indexing, query_account_info, stream_events, submit_transaction,
     unsubscribe_stream, EventFilter,
@@ -18,6 +18,30 @@ use stellar_nebula_nomad::integrations::horizon_client::{
 
 fn fresh_env() -> Env {
     Env::default()
+}
+
+/// Number of contract events emitted so far.
+fn event_count(env: &Env) -> usize {
+    env.events().all().events().len()
+}
+
+/// Symbol topics of the event at `index`, or `None` when it is missing.
+fn event_topics(env: &Env, index: usize) -> Option<std::vec::Vec<std::string::String>> {
+    let events = env.events().all();
+    let event = events.events().get(index)?;
+    let soroban_sdk::xdr::ContractEventBody::V0(body) = &event.body;
+    body.topics
+        .iter()
+        .map(|topic| match topic {
+            soroban_sdk::xdr::ScVal::Symbol(s) => {
+                let bytes: &[u8] = s.as_ref();
+                std::str::from_utf8(bytes)
+                    .ok()
+                    .map(std::string::ToString::to_string)
+            }
+            _ => None,
+        })
+        .collect()
 }
 
 // ── Account-info queries ──────────────────────────────────────────────────────
@@ -45,17 +69,15 @@ fn horizon_account_query_emits_horizon_query_event() {
     let addr = soroban_sdk::Address::generate(&env);
     query_account_info(&env, &addr);
 
-    let events = env.events().all();
-    assert_eq!(events.len(), 1);
-    let (topics, _) = events.get(0).unwrap();
+    let topics = event_topics(&env, 0).unwrap();
     assert_eq!(
-        topics.get(0).unwrap(),
-        soroban_sdk::symbol_short!("horizon").into_val(&env),
+        topics.get(0).map(std::string::String::as_str),
+        Some("horizon"),
         "first topic must be 'horizon'"
     );
     assert_eq!(
-        topics.get(1).unwrap(),
-        soroban_sdk::symbol_short!("query").into_val(&env),
+        topics.get(1).map(std::string::String::as_str),
+        Some("query"),
         "second topic must be 'query'"
     );
 }
@@ -67,7 +89,7 @@ fn horizon_multiple_account_queries_each_emit_one_event() {
     let b = soroban_sdk::Address::generate(&env);
     query_account_info(&env, &a);
     query_account_info(&env, &b);
-    assert_eq!(env.events().all().len(), 2);
+    assert_eq!(event_count(&env), 2);
 }
 
 // ── Transaction submission ────────────────────────────────────────────────────
@@ -101,13 +123,8 @@ fn horizon_submit_transaction_emits_tx_event() {
         String::from_str(&env, "cafebabe"),
         String::from_str(&env, "harvest"),
     );
-    let events = env.events().all();
-    assert_eq!(events.len(), 1);
-    let (topics, _) = events.get(0).unwrap();
-    assert_eq!(
-        topics.get(1).unwrap(),
-        soroban_sdk::symbol_short!("tx").into_val(&env)
-    );
+    let topics = event_topics(&env, 0).unwrap();
+    assert_eq!(topics.get(1).map(std::string::String::as_str), Some("tx"));
 }
 
 #[test]
@@ -118,7 +135,7 @@ fn horizon_emit_tx_for_indexing_compat_wrapper() {
         String::from_str(&env, "abc"),
         String::from_str(&env, "op"),
     );
-    assert_eq!(env.events().all().len(), 1);
+    assert_eq!(event_count(&env), 1);
 }
 
 #[test]
@@ -129,7 +146,7 @@ fn horizon_submit_multiple_transactions_emits_multiple_events() {
         let _ = i;
         submit_transaction(&env, hash, String::from_str(&env, "op"));
     }
-    assert_eq!(env.events().all().len(), 5);
+    assert_eq!(event_count(&env), 5);
 }
 
 // ── Event streaming ───────────────────────────────────────────────────────────
@@ -144,13 +161,8 @@ fn horizon_stream_events_emits_stream_event() {
     };
     stream_events(&env, &sub, filter);
 
-    let events = env.events().all();
-    assert_eq!(events.len(), 1);
-    let (topics, _) = events.get(0).unwrap();
-    assert_eq!(
-        topics.get(1).unwrap(),
-        soroban_sdk::symbol_short!("stream").into_val(&env)
-    );
+    let topics = event_topics(&env, 0).unwrap();
+    assert_eq!(topics.get(1).map(std::string::String::as_str), Some("stream"));
 }
 
 #[test]
@@ -162,7 +174,7 @@ fn horizon_stream_with_wildcard_sub_topic_succeeds() {
         sub_topic: String::from_str(&env, ""),
     };
     stream_events(&env, &sub, filter);
-    assert_eq!(env.events().all().len(), 1);
+    assert_eq!(event_count(&env), 1);
 }
 
 #[test]
@@ -171,13 +183,8 @@ fn horizon_unsubscribe_emits_unsub_event() {
     let sub = soroban_sdk::Address::generate(&env);
     unsubscribe_stream(&env, &sub);
 
-    let events = env.events().all();
-    assert_eq!(events.len(), 1);
-    let (topics, _) = events.get(0).unwrap();
-    assert_eq!(
-        topics.get(1).unwrap(),
-        soroban_sdk::symbol_short!("unsub").into_val(&env)
-    );
+    let topics = event_topics(&env, 0).unwrap();
+    assert_eq!(topics.get(1).map(std::string::String::as_str), Some("unsub"));
 }
 
 #[test]
@@ -190,7 +197,7 @@ fn horizon_subscribe_then_unsubscribe_emits_two_events() {
     };
     stream_events(&env, &sub, filter);
     unsubscribe_stream(&env, &sub);
-    assert_eq!(env.events().all().len(), 2);
+    assert_eq!(event_count(&env), 2);
 }
 
 // ── Full workflow ─────────────────────────────────────────────────────────────
@@ -220,5 +227,5 @@ fn horizon_full_workflow_query_submit_stream() {
     stream_events(&env, &player, filter);
 
     // One event per operation.
-    assert_eq!(env.events().all().len(), 3);
+    assert_eq!(event_count(&env), 3);
 }

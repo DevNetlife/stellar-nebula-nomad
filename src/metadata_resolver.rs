@@ -94,7 +94,7 @@ fn validate_api_token(token: &Bytes) -> bool {
 /// On Soroban, the actual HTTP POST is performed off-chain via the
 /// authorization callback mechanism. This function prepares the payload
 /// that the off-chain pinning client consumes.
-fn build_pin_request(cid: &Bytes, token_id: u64, replication_factor: u32) -> Bytes {
+fn build_pin_request(cid: &Bytes, _token_id: u64, _replication_factor: u32) -> Bytes {
     // In Soroban contracts, we store the CID for off-chain pinning.
     // The actual HTTP request is made by an external service watching
     // the `meta.pinned` event. This function validates and tags the CID.

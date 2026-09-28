@@ -1,5 +1,11 @@
 #![no_std]
 
+// Soroban SDK 28 deprecates `events().publish` (in favour of `#[contractevent]`
+// types) and `Env::register_contract` (in favour of `register`). Migrating the
+// hundreds of emit sites is tracked separately, so keep the deprecation noise
+// out of `clippy -- -D warnings` until that migration lands.
+#![allow(deprecated)]
+
 // Unit tests (proptest in particular) need std's `format!`/`vec!` macros.
 #[cfg(test)]
 #[macro_use]
@@ -53,6 +59,8 @@ pub mod ship_repair;
 #[cfg(any(test, feature = "fuzz"))]
 pub mod test_helpers;
 mod treasure_vault;
+// Issue #293: staking is exercised by `tests/economy/test_staking.rs`.
+pub mod staking;
 
 mod yield_farming;
 pub mod governance;
@@ -158,7 +166,9 @@ pub use resource_minter::{
 pub use ship_nft::{DataKey as ShipDataKey, ShipError, ShipNft};
 pub use blueprint_factory::{Blueprint, BlueprintError, BlueprintRarity};
 pub use referral_system::{Referral, ReferralError};
-pub use player_profile::{PlayerProfile, ProfileError, ProgressUpdate};
+pub use player_profile::{
+    PlayerProfile, ProfileError, ProgressUpdate, ProfileSection, ProfileSectionData,
+};
 pub use session_manager::{Session, SessionError};
 pub use ship_registry::Ship;
 pub use onboarding_tutorial::{
@@ -167,7 +177,8 @@ pub use onboarding_tutorial::{
 };
 pub use leaderboards::{
     LeaderboardEntry, LeaderboardEntry as EnhancedLeaderboardEntry, GuildEntry, RegionalEntry, AchievementEntry,
-    LeaderboardRewards, LeaderboardError,
+    LeaderboardRewards, LeaderboardError, PageMeta,
+    DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE,
     CATEGORY_ESSENCE, CATEGORY_SCANS, CATEGORY_MISSIONS,
     CATEGORY_NEBULAE_EXPLORED, CATEGORY_SHIPS_MINTED, CATEGORY_TRADES,
     CATEGORY_CRAFTS, CATEGORY_BOUNTIES, CATEGORY_PVP_WINS,
@@ -506,6 +517,57 @@ impl NebulaNomadContract {
         limit: u32,
     ) -> Result<Vec<EnhancedLeaderboardEntry>, LeaderboardError> {
         leaderboards::get_leaderboard(&env, category, time_period, limit)
+    }
+
+    /// Read one page of a category leaderboard (bounded read for large boards).
+    pub fn get_leaderboard_page(
+        env: Env,
+        category: Symbol,
+        time_period: Symbol,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<EnhancedLeaderboardEntry>, PageMeta), LeaderboardError> {
+        leaderboards::get_leaderboard_page(&env, category, time_period, page, page_size)
+    }
+
+    /// Read one page of the guild leaderboard.
+    pub fn get_guild_leaderboard_page(
+        env: Env,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<leaderboards::GuildEntry>, PageMeta), LeaderboardError> {
+        leaderboards::get_guild_leaderboard_page(&env, page, page_size)
+    }
+
+    /// Read one page of a regional leaderboard.
+    pub fn get_regional_leaderboard_page(
+        env: Env,
+        region: Symbol,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<leaderboards::RegionalEntry>, PageMeta), LeaderboardError> {
+        leaderboards::get_regional_leaderboard_page(&env, region, page, page_size)
+    }
+
+    /// Read one page of the achievement leaderboard.
+    pub fn get_achievement_leaderboard_page(
+        env: Env,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<leaderboards::AchievementEntry>, PageMeta), LeaderboardError> {
+        leaderboards::get_achievement_leaderboard_page(&env, page, page_size)
+    }
+
+    /// Read one page of an archived (season) leaderboard.
+    pub fn get_archived_leaderboard_page(
+        env: Env,
+        category: Symbol,
+        time_period: Symbol,
+        season: u32,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<EnhancedLeaderboardEntry>, PageMeta), LeaderboardError> {
+        leaderboards::get_archived_leaderboard_page(&env, category, time_period, season, page, page_size)
     }
 
     /// Set a player's guild affiliation.
@@ -1333,6 +1395,15 @@ impl NebulaNomadContract {
         player_profile::get_profile(&env, profile_id)
     }
 
+    /// Load a single profile section so callers only pay for what they read.
+    pub fn load_profile_section(
+        env: Env,
+        profile_id: u64,
+        section: ProfileSection,
+    ) -> Result<ProfileSectionData, ProfileError> {
+        player_profile::load_profile_section(&env, profile_id, section)
+    }
+
     // ─── Onboarding Tutorial (Issue #139) ────────────────────────────────
 
     /// Initialize the onboarding system with an admin.
@@ -2107,7 +2178,7 @@ impl NebulaNomadContract {
         shared_lib::validate_address(&env, auth)
     }
 
-    pub fn calculate_yield(env: Env, base: i128, multiplier: u32) -> Result<i128, SharedError> {
+    pub fn calculate_yield(_env: Env, base: i128, multiplier: u32) -> Result<i128, SharedError> {
         shared_lib::calculate_yield(base, multiplier)
     }
 
@@ -2589,7 +2660,7 @@ impl NebulaNomadContract {
     }
 
     /// Calculate travel cost between two nebulae.
-    pub fn calculate_travel_cost(env: Env, origin_nebula: u64, destination: u64) -> u32 {
+    pub fn calculate_travel_cost(_env: Env, origin_nebula: u64, destination: u64) -> u32 {
         wormhole_traveler::calculate_travel_cost(origin_nebula, destination)
     }
 

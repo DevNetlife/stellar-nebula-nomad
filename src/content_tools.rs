@@ -367,7 +367,7 @@ pub fn delete_content(
 
     // Remove from creator's list
     let creator_key = ContentDataKey::CreatorContent(creator.clone());
-    let mut creator_contents: Vec<u64> = env
+    let creator_contents: Vec<u64> = env
         .storage()
         .persistent()
         .get(&creator_key)
@@ -896,7 +896,7 @@ mod tests {
 
     fn make_env() -> (Env, soroban_sdk::Address) {
         let env = Env::default();
-        let id = env.register_contract(None, Stub);
+        let id = env.register(Stub, ());
         (env, id)
     }
 

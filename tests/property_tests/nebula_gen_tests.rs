@@ -22,7 +22,7 @@ fn make_env() -> (Env, NebulaNomadContractClient<'static>) {
         min_persistent_entry_ttl: 1_000,
         max_entry_ttl: 10_000,
     });
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     (env, client)
 }

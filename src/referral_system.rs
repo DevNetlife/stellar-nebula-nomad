@@ -592,7 +592,7 @@ pub fn get_global_stats(env: &Env) -> (u64, i128) {
 fn check_fraud(
     env: &Env,
     referrer: &Address,
-    new_nomad: &Address,
+    _new_nomad: &Address,
     fingerprint: Option<u64>,
 ) -> Result<(), ReferralError> {
     // Check if referrer is blocked.

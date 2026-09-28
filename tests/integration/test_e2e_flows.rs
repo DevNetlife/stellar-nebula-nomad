@@ -21,7 +21,7 @@ fn setup_env() -> (Env, NebulaNomadContractClient<'static>, Address) {
         min_persistent_entry_ttl: 1000,
         max_entry_ttl: 10_000,
     });
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let player = Address::generate(&env);
     (env, client, player)
@@ -251,7 +251,7 @@ fn test_e2e_ledger_time_progression() {
         max_entry_ttl: 10_000,
     });
 
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let player = Address::generate(&env);
 

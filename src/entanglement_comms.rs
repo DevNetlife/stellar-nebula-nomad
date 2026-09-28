@@ -174,7 +174,7 @@ pub fn send_entangled_message(
     env: &Env,
     caller: &Address,
     pair_id: u64,
-    message: &BytesN<64>,
+    _message: &BytesN<64>,
 ) -> Result<u64, EntanglementError> {
     caller.require_auth();
 

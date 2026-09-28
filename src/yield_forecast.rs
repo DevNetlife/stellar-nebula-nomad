@@ -364,7 +364,7 @@ fn get_recent_data(
 }
 
 /// Calculate simple moving average.
-fn calculate_moving_average(env: &Env, data: &Vec<YieldDataPoint>) -> i128 {
+fn calculate_moving_average(_env: &Env, data: &Vec<YieldDataPoint>) -> i128 {
     if data.is_empty() {
         return 0;
     }
@@ -380,7 +380,7 @@ fn calculate_moving_average(env: &Env, data: &Vec<YieldDataPoint>) -> i128 {
 }
 
 /// Calculate trend (average daily change).
-fn calculate_trend(env: &Env, data: &Vec<YieldDataPoint>) -> i128 {
+fn calculate_trend(_env: &Env, data: &Vec<YieldDataPoint>) -> i128 {
     if data.len() < 2 {
         return 0;
     }
@@ -494,7 +494,7 @@ pub fn update_model_params(
 
 /// Clear stale forecast cache (admin only).
 pub fn clear_stale_forecasts(
-    env: &Env,
+    _env: &Env,
     _admin: &Address,
     _older_than_seconds: u64,
 ) -> Result<u32, ForecastError> {

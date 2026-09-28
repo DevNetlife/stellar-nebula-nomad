@@ -135,7 +135,7 @@ pub fn get_resource_metrics(env: &Env, resource_type: Symbol) -> ResourceMetrics
 }
 
 /// Calculate inflation rate based on supply growth
-pub fn calculate_inflation_rate(env: &Env, old_supply: i128, new_supply: i128) -> u32 {
+pub fn calculate_inflation_rate(_env: &Env, old_supply: i128, new_supply: i128) -> u32 {
     if old_supply == 0 {
         return 0;
     }

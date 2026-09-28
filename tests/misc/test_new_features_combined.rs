@@ -18,7 +18,7 @@ fn test_found_alliance_success() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     let founder = Address::generate(&env);
@@ -39,7 +39,7 @@ fn test_join_alliance_success() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     let founder = Address::generate(&env);
@@ -62,7 +62,7 @@ fn test_join_alliance_already_member() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     let founder = Address::generate(&env);
@@ -80,7 +80,7 @@ fn test_contribute_to_treasury() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     let founder = Address::generate(&env);
@@ -104,7 +104,7 @@ fn test_leave_alliance() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     let founder = Address::generate(&env);
@@ -130,7 +130,7 @@ fn test_initialize_oracle() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
@@ -149,7 +149,7 @@ fn test_update_resource_price() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
@@ -173,7 +173,7 @@ fn test_get_current_market_rate() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
@@ -197,7 +197,7 @@ fn test_batch_update_prices() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
@@ -234,7 +234,7 @@ fn test_price_history() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
@@ -263,7 +263,7 @@ fn test_initialize_presets() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     client.initialize_presets();
@@ -282,7 +282,7 @@ fn test_generate_music_seed() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     let nebula_id = 42u64;
@@ -297,7 +297,7 @@ fn test_get_instrument_layer() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     client.initialize_presets();
@@ -318,7 +318,7 @@ fn test_get_all_layers() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     client.initialize_presets();
@@ -342,7 +342,7 @@ fn test_music_seed_determinism() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     client.initialize_presets();
@@ -361,7 +361,7 @@ fn test_invalid_layer() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     client.initialize_presets();
@@ -381,7 +381,7 @@ fn test_wormhole_and_alliance_integration() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     // Create alliance
@@ -410,7 +410,7 @@ fn test_market_oracle_and_audio_integration() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     // Initialize oracle
@@ -445,7 +445,7 @@ fn test_full_feature_integration() {
     let env = Env::default();
     env.mock_all_auths();
     
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     // 1. Create alliance

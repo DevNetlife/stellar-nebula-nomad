@@ -425,7 +425,7 @@ pub fn get_tier_reward(tier: u32) -> i128 {
 }
 
 // ─── Internal Helpers ──────────────────────────────────────────────────────────
-fn generate_code_from_address(env: &Env, address: &Address) -> BytesN<8> {
+fn generate_code_from_address(env: &Env, _address: &Address) -> BytesN<8> {
     // Simple code generation from address bytes
     let mut code = [0u8; 8];
     // Use first 8 bytes of address representation
@@ -462,7 +462,7 @@ fn update_leaderboard(
     referrer: &Address,
     active_referrals: u32,
     tier: u32,
-    total_rewards: i128,
+    _total_rewards: i128,
 ) {
     // Simplified leaderboard update - just emit event
     env.events().publish(
@@ -473,8 +473,6 @@ fn update_leaderboard(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use soroban_sdk::testutils::Address as _;
     
     #[test]
     #[ignore]

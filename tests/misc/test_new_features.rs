@@ -207,7 +207,7 @@ fn test_batch_sizes() {
 #[test]
 fn test_audit_and_sustainability_and_anomaly_and_shared_lib() {
     let env = Env::default();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let player = Address::generate(&env);

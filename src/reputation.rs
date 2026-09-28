@@ -324,7 +324,7 @@ pub fn resolve_report(
         return Err(ReputationError::Unauthorized);
     }
 
-    let mut disputes: Vec<DisputeReport> = env
+    let disputes: Vec<DisputeReport> = env
         .storage()
         .persistent()
         .get(&ReputationKey::DisputeList)

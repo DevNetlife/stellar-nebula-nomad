@@ -969,7 +969,6 @@ mod tests {
         use crate::nebula_explorer::{CellType, NebulaCell};
         use soroban_sdk::contractimpl;
         use soroban_sdk::testutils::{Events as _, Ledger, LedgerInfo};
-        use soroban_sdk::Address as _;
 
         #[contract]
         struct Stub;
@@ -1048,7 +1047,7 @@ mod tests {
 
         /// Register a ship owned by `owner` and return its ID.
         fn ship_for(env: &Env, owner: &Address) -> u64 {
-            ship_nft::mint_ship(
+            crate::ship_nft::mint_ship(
                 env,
                 owner,
                 &soroban_sdk::symbol_short!("explorer"),
@@ -1112,7 +1111,7 @@ mod tests {
             let to = Address::generate(env);
 
             let ship_id = c.invoke(|env| ship_for(env, &from));
-            c.invoke(|env| ship_nft::transfer_ship(env, ship_id, &from, &to).unwrap());
+            c.invoke(|env| crate::ship_nft::transfer_ship(env, ship_id, &from, &to).unwrap());
 
             let layout = layout_with(env, CellType::DarkMatter, 12);
             c.invoke(|env| harvest_resources(env, ship_id, &layout).unwrap());
@@ -1243,11 +1242,11 @@ mod tests {
                 let owner = Address::generate(env);
                 let ship_id = ship_for(env, &owner);
                 let layout = layout_with(env, CellType::Wormhole, 8);
-                let before = env.events().all().len();
+                let before = env.events().all().events().len();
 
                 harvest_resources(env, ship_id, &layout).unwrap();
 
-                assert_eq!(env.events().all().len(), before + 1);
+                assert_eq!(env.events().all().events().len(), before + 1);
             });
         }
 
@@ -1357,11 +1356,11 @@ mod tests {
                 let seller = Address::generate(env);
                 let asset = soroban_sdk::symbol_short!("dust");
                 credit_resource_balance(env, &seller, &asset, 4).unwrap();
-                let before = env.events().all().len();
+                let before = env.events().all().events().len();
 
                 auto_list_on_dex(env, &seller, &asset, 2).unwrap();
 
-                assert_eq!(env.events().all().len(), before + 1);
+                assert_eq!(env.events().all().events().len(), before + 1);
             });
         }
 

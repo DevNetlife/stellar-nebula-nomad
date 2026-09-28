@@ -65,7 +65,7 @@ pub fn validate_string(
     _env: &Env,
     value: &String,
     max_length: u32,
-    field_name: &str,
+    _field_name: &str,
     allow_empty: bool,
 ) -> Result<(), ValidationError> {
     // Validate length

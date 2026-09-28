@@ -25,7 +25,7 @@ fn setup_env() -> (Env, NebulaNomadContractClient<'static>, Address) {
         min_persistent_entry_ttl: 1000,
         max_entry_ttl: 10_000,
     });
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let admin = Address::generate(&env);
     (env, client, admin)
@@ -137,7 +137,7 @@ fn test_multi_admin_pause_authorization() {
         max_entry_ttl: 10_000,
     });
 
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin1 = Address::generate(&env);

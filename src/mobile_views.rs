@@ -144,14 +144,11 @@ pub fn get_mobile_dashboard(env: &Env, player: &Address) -> MobileDashboard {
 
     let (has_profile, total_scans, essence_earned) = match profile_id_opt {
         Some(pid) => {
-            use crate::player_profile::PlayerProfile;
-            let profile: Option<PlayerProfile> = env
-                .storage()
-                .persistent()
-                .get(&ProfileKey::Profile(pid));
-            match profile {
-                Some(p) => (true, p.total_scans, p.essence_earned),
-                None => (false, 0u32, 0i128),
+            // Load only the counters section; identity and streaks are not
+            // needed for the dashboard summary.
+            match crate::player_profile::get_profile_progress(env, pid) {
+                Ok(p) => (true, p.total_scans, p.essence_earned),
+                Err(_) => (false, 0u32, 0i128),
             }
         }
         None => (false, 0u32, 0i128),

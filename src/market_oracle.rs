@@ -359,7 +359,7 @@ pub fn disable_trigger(env: &Env, admin: Address, trigger_id: u64) -> Result<(),
         return Err(OracleError::Unauthorized);
     }
 
-    let mut triggers: Vec<EventTrigger> = env
+    let triggers: Vec<EventTrigger> = env
         .storage()
         .persistent()
         .get(&OracleKey::EventTriggers)

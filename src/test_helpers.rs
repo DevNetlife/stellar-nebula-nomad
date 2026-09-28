@@ -7,7 +7,7 @@
 
 extern crate std;
 
-use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
+use soroban_sdk::testutils::{Address as _, Events, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, Address, Bytes, Env};
 
 use crate::{NebulaNomadContract, NebulaNomadContractClient};
@@ -166,4 +166,45 @@ pub fn vault_amount_corpus() -> std::vec::Vec<u64> {
 /// Returns a set of ship IDs that cover existing (1) and non-existing cases.
 pub fn ship_id_corpus() -> std::vec::Vec<u64> {
     std::vec![0, 1, 2, 999, u64::MAX]
+}
+
+// ─── Contract event inspection ────────────────────────────────────────────────
+//
+// `Events::all()` returns `ContractEvents` (SDK 23+) rather than the old
+// `Vec<(Address, Vec<Val>, Val)>`, so tests read topics through these helpers.
+
+/// Number of contract events emitted so far.
+pub fn event_count(env: &Env) -> usize {
+    env.events().all().events().len()
+}
+
+/// Symbol topics of the event at `index`, in emission order.
+///
+/// Returns `None` when the event does not exist or any of its topics is not a
+/// symbol (addresses, vectors, …).
+pub fn event_topics(env: &Env, index: usize) -> Option<std::vec::Vec<std::string::String>> {
+    let events = env.events().all();
+    let event = events.events().get(index)?;
+    let soroban_sdk::xdr::ContractEventBody::V0(body) = &event.body;
+    body.topics
+        .iter()
+        .map(|topic| match topic {
+            soroban_sdk::xdr::ScVal::Symbol(s) => {
+                let bytes: &[u8] = s.as_ref();
+                std::str::from_utf8(bytes)
+                    .ok()
+                    .map(std::string::ToString::to_string)
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// True when some emitted event's symbol topics start with `prefix`.
+pub fn has_event_topics(env: &Env, prefix: &[&str]) -> bool {
+    (0..event_count(env)).any(|i| {
+        event_topics(env, i)
+            .is_some_and(|topics| topics.len() >= prefix.len()
+                && topics.iter().zip(prefix.iter()).all(|(t, p)| t == p))
+    })
 }

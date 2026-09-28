@@ -108,7 +108,7 @@ fn test_traverse_wormhole_success() {
     let destination = 200u64;
     
     // Set up contract client
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     
     // Mint a ship for the traveler
@@ -157,7 +157,7 @@ fn test_traverse_wormhole_insufficient_energy() {
     let destination = 200u64;
     
     // Mint a ship for the traveler
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let ship = client.mint_ship(
         &traveler,
@@ -196,7 +196,7 @@ fn test_traverse_wormhole_unauthorized() {
     let destination = 200u64;
     
     // Mint a ship for the owner
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let ship = client.mint_ship(
         &ship_owner,
@@ -231,7 +231,7 @@ fn test_traverse_wormhole_not_found() {
     let traveler = <soroban_sdk::Address as TestAddress>::generate(&env);
     
     // Mint a ship for the traveler
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let ship = client.mint_ship(
         &traveler,
@@ -350,7 +350,7 @@ fn test_travel_history_limit() {
     let traveler = <soroban_sdk::Address as TestAddress>::generate(&env);
     
     // Mint a ship for the traveler
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let ship = client.mint_ship(
         &traveler,
@@ -430,7 +430,7 @@ fn test_multi_nebula_journey_simulation() {
     let traveler = <soroban_sdk::Address as TestAddress>::generate(&env);
     
     // Mint a ship for the traveler
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let ship = client.mint_ship(
         &traveler,

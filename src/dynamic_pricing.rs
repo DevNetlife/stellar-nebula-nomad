@@ -407,7 +407,7 @@ pub fn observe_price(
 
     let previous: Option<PriceState> = env.storage().persistent().get(&key);
 
-    let mut state = match previous {
+    let state = match previous {
         // Seed: no average yet, so nothing to smooth or reject against.
         None => PriceState {
             resource: resource.clone(),

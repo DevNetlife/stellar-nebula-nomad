@@ -179,7 +179,7 @@ pub fn get_energy_balance(env: &Env, ship_id: u64) -> Result<EnergyBalance, Ener
         .unwrap_or(BASE_PASSIVE_REGEN);
 
     let regen_key = EnergyKey::LastRegen(ship_id);
-    let last_regen: u64 = env.storage().persistent().get(&regen_key).unwrap_or(0);
+    let _last_regen: u64 = env.storage().persistent().get(&regen_key).unwrap_or(0);
 
     Ok(EnergyBalance {
         ship_id,

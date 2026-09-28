@@ -79,7 +79,7 @@ fn compute_commitment_hash(
     env: &Env,
     stat_type: &Symbol,
     value: i128,
-    player: &Address,
+    _player: &Address,
     timestamp: u64,
 ) -> BytesN<32> {
     let mut data = soroban_sdk::Bytes::new(env);
@@ -112,7 +112,7 @@ fn compute_commitment_hash(
 /// Verify a proof against a commitment.
 /// This is a simplified verification - in production, use proper ZK proofs.
 fn verify_proof_internal(
-    env: &Env,
+    _env: &Env,
     commitment: &BytesN<32>,
     proof: &BytesN<64>,
 ) -> bool {

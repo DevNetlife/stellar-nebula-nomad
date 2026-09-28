@@ -391,7 +391,7 @@ pub fn record_migration_completion(
 ) -> Result<(), MigrationError> {
     require_admin(env, admin)?;
 
-    let record = MigrationRecord {
+    let _record = MigrationRecord {
         id: migration_id,
         from_version,
         to_version,

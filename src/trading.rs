@@ -190,7 +190,7 @@ pub fn cancel_limit_order(env: &Env, trader: &Address, order_id: u64) -> Result<
         .remove(&TradingKey::Order(order_id));
 
     // Remove from trader's order list
-    let mut ids: Vec<u64> = env
+    let ids: Vec<u64> = env
         .storage()
         .persistent()
         .get(&TradingKey::TraderOrders(trader.clone()))

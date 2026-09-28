@@ -127,7 +127,7 @@ mod tests {
     fn make_env() -> (Env, Address) {
         let env = Env::default();
         env.mock_all_auths();
-        let id = env.register_contract(None, Stub);
+        let id = env.register(Stub, ());
         (env, id)
     }
 

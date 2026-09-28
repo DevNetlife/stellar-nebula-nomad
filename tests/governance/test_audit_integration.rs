@@ -20,7 +20,7 @@ fn setup_env() -> (Env, NebulaNomadContractClient<'static>) {
         min_persistent_entry_ttl: 1000,
         max_entry_ttl: 10_000,
     });
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     (env, client)
 }
@@ -32,7 +32,7 @@ fn test_audit_log_creation() {
     let action = symbol_short!("mship");
     let details = BytesN::from_array(&env, &[1u8; 128]);
 
-    env.as_contract(&env.register_contract(None, NebulaNomadContract), || {
+    env.as_contract(&env.register(NebulaNomadContract, ()), || {
         let entry = log_audit_event(&env, Some(&player), action.clone(), details.clone())
             .expect("log should succeed");
         assert_eq!(entry.actor, Some(player.clone()));
@@ -48,7 +48,7 @@ fn test_audit_log_sequential_ids() {
     let action = symbol_short!("scan");
     let details = BytesN::from_array(&env, &[0u8; 128]);
 
-    env.as_contract(&env.register_contract(None, NebulaNomadContract), || {
+    env.as_contract(&env.register(NebulaNomadContract, ()), || {
         let entry1 = log_audit_event(&env, Some(&player), action.clone(), details.clone())
             .expect("first log should succeed");
         let entry2 = log_audit_event(&env, Some(&player), action.clone(), details.clone())
@@ -70,7 +70,7 @@ fn test_audit_log_query_filter() {
     let action2 = symbol_short!("scan");
     let details = BytesN::from_array(&env, &[0u8; 128]);
 
-    env.as_contract(&env.register_contract(None, NebulaNomadContract), || {
+    env.as_contract(&env.register(NebulaNomadContract, ()), || {
         let _ = log_audit_event(&env, Some(&player), action1.clone(), details.clone());
         let _ = log_audit_event(&env, Some(&player), action2.clone(), details.clone());
         let _ = log_audit_event(&env, Some(&player), action1.clone(), details.clone());
@@ -93,7 +93,7 @@ fn test_audit_log_count_increments() {
     let action = symbol_short!("test");
     let details = BytesN::from_array(&env, &[0u8; 128]);
 
-    env.as_contract(&env.register_contract(None, NebulaNomadContract), || {
+    env.as_contract(&env.register(NebulaNomadContract, ()), || {
         assert_eq!(get_audit_count(&env), 0);
 
         let _ = log_audit_event(&env, Some(&player), action.clone(), details.clone());
@@ -113,7 +113,7 @@ fn test_audit_log_without_actor() {
     let action = symbol_short!("system");
     let details = BytesN::from_array(&env, &[42u8; 128]);
 
-    env.as_contract(&env.register_contract(None, NebulaNomadContract), || {
+    env.as_contract(&env.register(NebulaNomadContract, ()), || {
         let entry = log_audit_event(&env, None, action.clone(), details.clone())
             .expect("log should succeed");
         assert_eq!(entry.actor, None);
@@ -128,7 +128,7 @@ fn test_audit_log_query_respects_limit() {
     let action = symbol_short!("bulk");
     let details = BytesN::from_array(&env, &[0u8; 128]);
 
-    env.as_contract(&env.register_contract(None, NebulaNomadContract), || {
+    env.as_contract(&env.register(NebulaNomadContract, ()), || {
         for _ in 0..20 {
             let _ = log_audit_event(&env, Some(&player), action.clone(), details.clone());
         }
@@ -146,7 +146,7 @@ fn test_audit_log_query_all_with_zero_limit() {
     let action = symbol_short!("all");
     let details = BytesN::from_array(&env, &[0u8; 128]);
 
-    env.as_contract(&env.register_contract(None, NebulaNomadContract), || {
+    env.as_contract(&env.register(NebulaNomadContract, ()), || {
         for _ in 0..15 {
             let _ = log_audit_event(&env, Some(&player), action.clone(), details.clone());
         }
@@ -167,7 +167,7 @@ fn test_audit_log_preserves_details() {
     details_arr[1] = 99;
     let details = BytesN::from_array(&env, &details_arr);
 
-    env.as_contract(&env.register_contract(None, NebulaNomadContract), || {
+    env.as_contract(&env.register(NebulaNomadContract, ()), || {
         let entry = log_audit_event(&env, Some(&player), action, details.clone())
             .expect("log should succeed");
         assert_eq!(entry.details, details);
@@ -178,7 +178,7 @@ fn test_audit_log_preserves_details() {
 fn test_audit_log_timestamps_increase() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let _client = NebulaNomadContractClient::new(&env, &contract_id);
 
     env.ledger().set(LedgerInfo {

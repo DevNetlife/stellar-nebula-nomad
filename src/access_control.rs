@@ -1618,7 +1618,7 @@ mod tests {
         for _ in 0..6 {
             grantees.push_back(Address::generate(&env));
         }
-        let result = grant_role_batch(&env, admin, nomad_role(), grantees.clone(), None);
+        let _result = grant_role_batch(&env, admin, nomad_role(), grantees.clone(), None);
         // Note: Would fail due to AdminRequired, but the batch limit should be checked first
         // Let's test with correct admin
     }

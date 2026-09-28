@@ -215,7 +215,7 @@ fn add_to_segment(env: &Env, player: &Address, segment: PlayerSegment) {
 /// Remove a player from a segment's member list.
 fn remove_from_segment(env: &Env, player: &Address, segment: PlayerSegment) {
     let segment_name = segment_to_symbol(segment);
-    let mut members: Vec<Address> = env
+    let members: Vec<Address> = env
         .storage()
         .persistent()
         .get(&SegmentKey::SegmentMembers(segment_name.clone()))

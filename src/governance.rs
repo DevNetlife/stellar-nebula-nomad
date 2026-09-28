@@ -71,7 +71,7 @@ enum GovernanceDataKey {
 pub fn create_proposal(env: Env, creator: Address, description: String, param_change: BytesN<128>) -> Result<u64, GovError> {
     creator.require_auth();
 
-    let mut proposal_id = env.storage().instance().get::<_, u64>(&symbol_short!("next_gid")).unwrap_or(0);
+    let proposal_id = env.storage().instance().get::<_, u64>(&symbol_short!("next_gid")).unwrap_or(0);
     
     let proposal = Proposal {
         id: proposal_id,

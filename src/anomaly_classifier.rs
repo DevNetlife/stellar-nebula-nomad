@@ -165,7 +165,7 @@ mod tests {
 
     fn make_env() -> (Env, Address) {
         let env = Env::default();
-        let id = env.register_contract(None, Stub);
+        let id = env.register(Stub, ());
         (env, id)
     }
 
