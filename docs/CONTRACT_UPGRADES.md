@@ -133,3 +133,219 @@ If an anomaly, state mismatch, or unexpected behavior occurs post-upgrade, execu
 - All upgrade entry points require explicit authorization (`admin.require_auth()`).
 - Unauthenticated upgrade attempts emit audit events and fail with `MigrationError::Unauthorized`.
 - Incompatible migrations must be explicitly flagged using `mark_incompatible()`.
+
+---
+
+## 6. Upgrade Types & When to Use Each
+
+### 1. Parameter Changes Only
+**Use when**: Updating configuration values without changing contract logic.
+
+**Risk Level**: Low
+
+**Steps**:
+```rust
+// 1. Update config in storage
+let mut config = get_config(&env)?;
+config.param = new_value;
+store_config(&env, &config);
+
+// 2. No migration needed
+// 3. Events logged automatically
+```
+
+**Testing**: Run full test suite - data structures don't change.
+
+### 2. Code Changes (Logic Only)
+**Use when**: Fixing bugs or optimizing code without changing storage schema.
+
+**Risk Level**: Medium
+
+**Steps**:
+1. Build new WASM
+2. Install on testnet
+3. Verify with test transactions
+4. Execute contract upgrade via admin
+
+**Testing**: New code must handle existing state correctly.
+
+### 3. Storage Layout Changes
+**Use when**: Adding new fields, removing fields, or changing data structures.
+
+**Risk Level**: High
+
+**Steps**:
+1. Increment schema version
+2. Plan migration
+3. Run dry-run validation
+4. Execute batch migrations
+5. Update WASM code
+6. Finalize migration
+
+**Testing**: Test with production-scale datasets.
+
+---
+
+## 7. Migration Strategies & Decision Tree
+
+### Strategy 1: In-Place Updates (Simple)
+Best for: Adding optional fields with defaults.
+
+```rust
+// Before: struct Ship { id: u64, name: String }
+// After: struct Ship { id: u64, name: String, level: u32 }
+
+// Migration: Set all level = 1 (default)
+for ship_id in all_ships {
+    let ship = get_ship(&env, ship_id);
+    ship.level = 1; // Default value
+    save_ship(&env, ship_id, ship);
+}
+```
+
+### Strategy 2: Blue-Green Deployment (Safer)
+Best for: Complex changes, zero-downtime required.
+
+```rust
+// 1. Deploy new version alongside old
+// 2. Gradually migrate users to new version
+// 3. Monitor for issues
+// 4. Retire old version after stability window
+
+// Step implementation:
+// Week 1: New version deployed, 0% traffic
+// Week 2: 10% traffic to new version
+// Week 3: 50% traffic to new version  
+// Week 4: 100% traffic, retire old version
+```
+
+### Strategy 3: Gradual Rollout (Recommended)
+Best for: Large datasets, high availability required.
+
+```rust
+// 1. Split state into chunks
+// 2. Migrate one chunk per ledger close
+// 3. Monitor gas usage and errors
+// 4. Pause/retry if issues detected
+// 5. Complete when all chunks migrated
+
+const CHUNK_SIZE = 100; // Records per batch
+for i in 0..total_chunks {
+    execute_migration_batch(i, CHUNK_SIZE)?;
+    if should_pause(&env)? {
+        break;
+    }
+}
+```
+
+---
+
+## 8. Post-Upgrade Verification
+
+After successful upgrade, verify:
+
+- [ ] **Functionality Tests**
+  ```bash
+  cargo test --locked integration_tests
+  ```
+
+- [ ] **State Consistency**
+  ```rust
+  migration_framework::verify_state_checksums(&env)?;
+  ```
+
+- [ ] **Performance Baseline**
+  - Measure gas usage of common operations
+  - Compare to pre-upgrade baseline
+  - Alert if usage increased > 10%
+
+- [ ] **Smoke Tests**
+  - Execute 100 random transactions
+  - Verify all succeed
+  - Check event logs for errors
+
+- [ ] **Monitoring Dashboard**
+  - Watch error rates
+  - Monitor latency
+  - Check resource usage
+
+---
+
+## 9. Emergency Procedures
+
+### Contract Stuck in Migration
+If migration hangs or gets stuck:
+
+```bash
+# 1. Check migration status
+soroban contract invoke \
+  --id CONTRACT_ID \
+  --fn get_migration_status \
+  --network mainnet
+
+# 2. If recoverable, resume next batch
+soroban contract invoke \
+  --id CONTRACT_ID \
+  --fn resume_migration \
+  --arg <migration_id> \
+  --network mainnet
+
+# 3. If not recoverable, rollback immediately
+# (See Rollback Procedures section)
+```
+
+### Unexpected State Corruption
+If data corruption detected during or after upgrade:
+
+1. **Immediate Action**: Pause contract
+   ```rust
+   emergency_controls::pause_contract(&env, &admin)?;
+   ```
+
+2. **Restore from Checkpoint**:
+   ```rust
+   migration_framework::rollback_migration(&env, &admin, migration_id)?;
+   ```
+
+3. **Root Cause Analysis**: Review migration logs and checksums
+
+4. **Re-plan Migration**: With fixes, rerun from checkpoint
+
+---
+
+## 10. Governance Integration
+
+### Upgrade Proposal Workflow
+
+1. **Community Discussion** (GitHub Issues)
+   - Propose change with rationale
+   - Collect feedback for 1 week
+
+2. **Technical Review**
+   - Security audit (if code change)
+   - State migration dry-run
+   - Gas impact analysis
+
+3. **Multi-Sig Approval**
+   - Prepare upgrade transaction
+   - Require signatures from N of M signers
+   - Execute after N signatures collected
+
+4. **Staged Deployment**
+   - Deploy to testnet first
+   - Run for 24+ hours
+   - Collect metrics
+   - Deploy to mainnet
+
+5. **Monitoring & Rollback Window**
+   - 7-day rollback window post-upgrade
+   - Monitor error rates
+   - Be ready to rollback if needed
+
+### Configuration Changes (Lower Risk)
+Simpler process for parameter-only changes:
+
+1. **Proposal**: Present change to community
+2. **Snapshot vote**: Community votes on parameter
+3. **Execute**: If approved, update via multi-sig
+4. **Monitor**: Watch effects for 48 hours
