@@ -507,11 +507,9 @@ impl NebulaGen {
             .map_or(DEFAULT_LAYOUT_TTL, |c| c.layout_ttl);
 
         if is_expired(env.ledger().timestamp(), layout.generated_at, ttl) {
+            // Expiry is self-describing: the entry is removed and the caller
+            // gets `None`, so no event is emitted on this read path.
             store.remove(&key);
-            env.events().publish(
-                (symbol_short!("neb_gen"), symbol_short!("expired")),
-                ship_id,
-            );
             return None;
         }
         Some(layout)

@@ -510,6 +510,10 @@ pub fn distribute_rewards(
 
     let entries = get_leaderboard(env, category.clone(), time_period.clone(), 10)?;
 
+    // One payout event for the whole board: the category and period are
+    // board-wide, so repeating them per winner would repeat them up to 10x.
+    let mut winners: Vec<Address> = Vec::new(env);
+    let mut amounts: Vec<u64> = Vec::new(env);
     for i in 0..entries.len() {
         if let Some(entry) = entries.get(i) {
             let reward = match i {
@@ -520,17 +524,17 @@ pub fn distribute_rewards(
             };
 
             if reward > 0 {
-                env.events().publish(
-                    (symbol_short!("lb"), symbol_short!("reward")),
-                    (
-                        entry.player.clone(),
-                        reward,
-                        category.clone(),
-                        time_period.clone(),
-                    ),
-                );
+                winners.push_back(entry.player.clone());
+                amounts.push_back(reward);
             }
         }
+    }
+
+    if !winners.is_empty() {
+        env.events().publish(
+            (symbol_short!("lb"), symbol_short!("rewards")),
+            (category, time_period, winners, amounts),
+        );
     }
 
     Ok(())

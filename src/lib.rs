@@ -58,6 +58,8 @@ pub mod ship_upgrade;
 pub mod ship_repair;
 #[cfg(any(test, feature = "fuzz"))]
 pub mod test_helpers;
+#[cfg(test)]
+mod event_gas_tests;
 mod treasure_vault;
 // Issue #293: staking is exercised by `tests/economy/test_staking.rs`.
 pub mod staking;

@@ -341,13 +341,19 @@ pub fn repair_ship(
         .instance()
         .set(&RepairKey::TotalBurned, &total.saturating_add(cost));
 
+    // One event carries both the payment and the resulting durability change,
+    // so a repair costs a single event instead of two.
     env.events().publish(
-        (symbol_short!("ship_rep"), symbol_short!("paid")),
-        (ship_id, player.clone(), asset_id.clone(), cost, emergency),
-    );
-    env.events().publish(
-        (symbol_short!("ship_rep"), symbol_short!("durbl")),
-        (durability_before, durability_after),
+        (symbol_short!("ship_rep"), symbol_short!("repaired")),
+        (
+            ship_id,
+            player.clone(),
+            asset_id.clone(),
+            cost,
+            emergency,
+            durability_before,
+            durability_after,
+        ),
     );
 
     Ok(RepairReceipt {

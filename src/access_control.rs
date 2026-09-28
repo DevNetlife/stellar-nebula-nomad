@@ -626,7 +626,8 @@ pub fn grant_role_batch(
 ///   ```
 ///
 /// # Events
-/// - Emits a `PermissionChecked` event on every call (audit trail).
+/// - Emits an `rbac/perm_fail` event **only when the check fails**, so denials
+///   stay auditable without paying for an event on every successful check.
 pub fn check_permission(
     env: &Env,
     caller: &Address,
@@ -639,10 +640,6 @@ pub fn check_permission(
         for i in 0..known_roles.len() {
             if let Some(role) = known_roles.get(i) {
                 if is_emergency_role(env, &role) && has_role(env, &role, caller) {
-                    env.events().publish(
-                        (symbol_short!("rbac"), symbol_short!("emrg_ok")),
-                        (caller.clone(), action.clone()),
-                    );
                     return Ok(());
                 }
             }
@@ -653,11 +650,6 @@ pub fn check_permission(
     for i in 0..known_roles.len() {
         if let Some(role) = known_roles.get(i) {
             if has_role(env, &role, caller) && has_permission(env, &role, action) {
-                // Emit audit event
-                env.events().publish(
-                    (symbol_short!("rbac"), symbol_short!("perm_ok")),
-                    (caller.clone(), action.clone()),
-                );
                 return Ok(());
             }
         }

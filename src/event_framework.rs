@@ -98,6 +98,55 @@ pub fn register_event_schema(
     Ok(())
 }
 
+/// Resolve the registered schema version for `event_type`.
+///
+/// Defaults are seeded once by [`init_event_framework`] / [`register_event_schema`]
+/// rather than re-checked on every emit.
+fn schema_version(env: &Env, event_type: &Symbol) -> Result<u32, EventFrameworkError> {
+    env.storage()
+        .persistent()
+        .get::<_, u32>(&schema_key(event_type))
+        .ok_or(EventFrameworkError::InvalidEventType)
+}
+
+/// Persist one standard event record and publish it.
+///
+/// `index` and `seq_in_ts` are supplied by the caller so a burst can advance
+/// them in registers and write storage once per burst instead of once per event.
+fn store_event(
+    env: &Env,
+    caller: &Address,
+    event_type: &Symbol,
+    payload: &BytesN<256>,
+    version: u32,
+    index: u64,
+    seq_in_ts: u64,
+    timestamp: u64,
+) -> u64 {
+    let id = timestamp
+        .saturating_mul(1_000_000)
+        .saturating_add(seq_in_ts);
+
+    let record = StandardEvent {
+        id,
+        event_type: event_type.clone(),
+        payload: payload.clone(),
+        version,
+        caller: caller.clone(),
+        timestamp,
+    };
+    env.storage().persistent().set(&event_key(index), &record);
+
+    // The published tuple stays minimal: `version` lives on the stored record,
+    // so it does not need to be serialized into every event.
+    env.events().publish(
+        (symbol_short!("std_evt"), event_type.clone()),
+        (id, caller.clone(), payload.clone()),
+    );
+
+    id
+}
+
 pub fn emit_standard_event(
     env: &Env,
     caller: &Address,
@@ -105,13 +154,7 @@ pub fn emit_standard_event(
     payload: BytesN<256>,
 ) -> Result<u64, EventFrameworkError> {
     caller.require_auth();
-    ensure_defaults(env);
-
-    let version = env
-        .storage()
-        .persistent()
-        .get::<_, u32>(&schema_key(&event_type))
-        .ok_or(EventFrameworkError::InvalidEventType)?;
+    let version = schema_version(env, &event_type)?;
 
     let index = env
         .storage()
@@ -132,27 +175,16 @@ pub fn emit_standard_event(
         .persistent()
         .set(&ts_seq_key(timestamp), &seq_in_ts);
 
-    let id = timestamp
-        .saturating_mul(1_000_000)
-        .saturating_add(seq_in_ts);
-
-    let record = StandardEvent {
-        id,
-        event_type: event_type.clone(),
-        payload: payload.clone(),
+    Ok(store_event(
+        env,
+        caller,
+        &event_type,
+        &payload,
         version,
-        caller: caller.clone(),
+        index,
+        seq_in_ts,
         timestamp,
-    };
-
-    env.storage().persistent().set(&event_key(index), &record);
-
-    env.events().publish(
-        (symbol_short!("std_evt"), event_type),
-        (id, version, caller.clone(), payload),
-    );
-
-    Ok(id)
+    ))
 }
 
 pub fn emit_standard_event_burst(
@@ -164,13 +196,51 @@ pub fn emit_standard_event_burst(
     if payloads.len() > MAX_BURST_EVENTS {
         return Err(EventFrameworkError::LimitTooLarge);
     }
+    if payloads.is_empty() {
+        return Ok(0);
+    }
+
+    caller.require_auth();
+    let version = schema_version(env, &event_type)?;
+
+    // Read the two counters once, advance them in registers, and write each
+    // back a single time after the loop.
+    let base_index = env
+        .storage()
+        .persistent()
+        .get::<_, u64>(&index_key())
+        .unwrap_or(0);
+    let timestamp = env.ledger().timestamp();
+    let ts_key = ts_seq_key(timestamp);
+    let base_seq = env
+        .storage()
+        .persistent()
+        .get::<_, u64>(&ts_key)
+        .unwrap_or(0);
 
     let mut emitted: u32 = 0;
     for i in 0..payloads.len() {
         let payload = payloads.get(i).ok_or(EventFrameworkError::LimitTooLarge)?;
-        emit_standard_event(env, caller, event_type.clone(), payload)?;
+        store_event(
+            env,
+            caller,
+            &event_type,
+            &payload,
+            version,
+            base_index + u64::from(i) + 1,
+            base_seq + u64::from(i) + 1,
+            timestamp,
+        );
         emitted += 1;
     }
+
+    env.storage()
+        .persistent()
+        .set(&index_key(), &(base_index + u64::from(emitted)));
+    env.storage()
+        .persistent()
+        .set(&ts_key, &(base_seq + u64::from(emitted)));
+
     Ok(emitted)
 }
 

@@ -319,6 +319,11 @@ pub fn topic_ship_mint_rec() -> Symbol {
 }
 
 // ── Helper: publish a standard event ─────────────────────────────────────────
+/// Publish `topic` as the sole topic.
+///
+/// The previous `(evt, topic)` pair padded every event with a redundant
+/// `evt` symbol that no consumer can filter on; a single topic keeps the
+/// event stream the same size for one less symbol per emission.
 pub fn emit(env: &Env, topic: Symbol, data: impl soroban_sdk::IntoVal<Env, soroban_sdk::Val>) {
-    env.events().publish((symbol_short!("evt"), topic), data);
+    env.events().publish((topic,), data);
 }
