@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Maskable variant: full-bleed background, artwork inside the 80% safe zone. -->
+  <defs>
+    <radialGradient id="nebula" cx="38%" cy="34%" r="75%">
+      <stop offset="0%" stop-color="#b06dff" stop-opacity="0.9"/>
+      <stop offset="45%" stop-color="#4da3ff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#0b1020" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="#0b1020"/>
+  <rect width="512" height="512" fill="url(#nebula)"/>
+  <circle cx="170" cy="150" r="3" fill="#e8eefc" opacity="0.9"/>
+  <circle cx="360" cy="130" r="2" fill="#e8eefc" opacity="0.7"/>
+  <circle cx="390" cy="230" r="2.5" fill="#e8eefc" opacity="0.8"/>
+  <circle cx="130" cy="300" r="2" fill="#e8eefc" opacity="0.6"/>
+  <circle cx="320" cy="380" r="3" fill="#e8eefc" opacity="0.9"/>
+  <circle cx="256" cy="256" r="70" fill="none" stroke="#e8eefc" stroke-width="9" opacity="0.9"/>
+  <ellipse cx="256" cy="256" rx="136" ry="42" fill="none" stroke="#4dd08a" stroke-width="9" transform="rotate(-24 256 256)"/>
+  <circle cx="256" cy="256" r="28" fill="#e8eefc"/>
+</svg>

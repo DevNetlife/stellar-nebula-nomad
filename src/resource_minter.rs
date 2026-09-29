@@ -13,8 +13,9 @@ use crate::nebula_explorer::{CellType, NebulaLayout};
 use crate::nebula_gen::{NebulaError as NebulaGenError, NebulaGen};
 use crate::rate_limiter::{check_rate_limit, Operation, RateLimitError};
 use crate::reentrancy_guard::{with_guard, ReentrancyError};
-
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec,
+};
 
 pub type AssetId = ResourceType;
 
@@ -598,6 +599,16 @@ pub enum HarvestError {
     InsufficientBalance = 7,
     /// A guarded section was re-entered (Issue #472).
     Reentrancy = 8,
+    /// Buyer and seller are the same address.
+    SelfTrade = 9,
+    /// The offer's price is above the buyer's `max_price`, or the order's
+    /// price is below the seller's `min_price`.
+    SlippageExceeded = 10,
+    /// Requested amount is zero or larger than what the offer/order holds.
+    InvalidAmount = 11,
+    /// The limit order does not exist, is not a buy order, or is for a
+    /// different resource.
+    OrderUnavailable = 12,
 }
 
 impl crate::error_standard::StandardContractError for HarvestError {
@@ -608,7 +619,10 @@ impl crate::error_standard::StandardContractError for HarvestError {
             Self::EmptyHarvest | Self::InvalidPrice => (ErrorKind::Validation, false),
             Self::PriceOverflow | Self::DexFailure => (ErrorKind::Internal, false),
             Self::InsufficientBalance => (ErrorKind::ResourceLimit, false),
-            Self::Reentrancy => (ErrorKind::Conflict, false),
+            Self::Reentrancy | Self::SelfTrade => (ErrorKind::Conflict, false),
+            Self::SlippageExceeded => (ErrorKind::Conflict, true),
+            Self::InvalidAmount => (ErrorKind::Validation, false),
+            Self::OrderUnavailable => (ErrorKind::NotFound, false),
         };
         crate::error_standard::ErrorDescriptor {
             module: "resource_minter",
@@ -640,6 +654,15 @@ pub(crate) fn next_dex_offer_id(env: &Env) -> Result<u64, HarvestError> {
         .instance()
         .set(&ResourceKey::DexOfferCounter, &next);
     Ok(next)
+}
+
+/// Highest DEX offer ID allocated so far (`0` when none exist). Offer IDs are
+/// dense, so `1..=dex_offer_count()` enumerates every offer ever created.
+pub(crate) fn dex_offer_count(env: &Env) -> u64 {
+    env.storage()
+        .instance()
+        .get(&ResourceKey::DexOfferCounter)
+        .unwrap_or(0)
 }
 
 /// Read a holder's harvest balance for `asset`.
@@ -809,6 +832,7 @@ fn auto_list_on_dex_unguarded(
     env.storage()
         .instance()
         .set(&ResourceKey::DexOffer(offer_id), &offer);
+    crate::dex_integration::note_listing_opened(env, player);
 
     env.events().publish(
         (symbol_short!("dex"), symbol_short!("listed")),

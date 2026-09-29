@@ -35,11 +35,21 @@ Use the backup metadata (`metadata/contract_info.json`) plus Horizon history to 
 
 Serve from the last local `.tar.gz`. The snapshot includes ledger JSON so you can resume once Horizon returns.
 
+### Scenario 4 — Complete infrastructure loss
+
+Provision fresh infrastructure from `infrastructure/` (Terraform), restore the analytics database from the latest `scripts/backup/backup-postgres.sh` dump (`restore-postgres.sh --dump <file> --target-db <new-db-url>`), restore contract state per Scenario 1, and re-point DNS/secrets at the new instances. This is the scenario a quarterly drill (below) should exercise end-to-end.
+
+## Database Backups (issue #517)
+
+`scripts/backup/backup-postgres.sh` runs a `pg_dump` of the analytics database, checksums it, optionally ships it to S3, and prunes anything older than `RETENTION_DAYS` (default 90). `scripts/backup/restore-postgres.sh --dump <file> --verify-only` checks integrity; drop `--verify-only` and add `--target-db <url>` to actually restore. Point-in-time recovery depends on WAL archiving being enabled on the server — see the comment in `backup-postgres.sh`; the managed RDS instance in `infrastructure/modules/database` gets automated backups/PITR via `backup_retention_period` already.
+
+RTO target: **4 hours**. RPO target: **24 hours**.
+
 ## Testing & Verification
 
 - `./scripts/backup.sh --test-restore` takes a snapshot and runs restore in `--test-mode`.
 - GitHub Actions `backup.yml` verifies archive integrity after each scheduled run.
-- Monthly drill job performs a dry-run restore.
+- Monthly drill job performs a dry-run restore of contract state; schedule a **quarterly** full drill of Scenario 4 (complete infrastructure loss) separately — that one needs a maintainer to actually provision throwaway infrastructure, which isn't something this change can schedule/run on its own.
 
 ## Monitoring & Alerts
 

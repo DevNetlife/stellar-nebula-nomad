@@ -226,6 +226,18 @@ fn cancel_limit_order_unguarded(
         return Err(TradingError::NotOrderOwner);
     }
 
+    remove_order(env, trader, order_id);
+
+    env.events().publish(
+        (symbol_short!("trade"), symbol_short!("cancel")),
+        (trader.clone(), order_id),
+    );
+
+    Ok(())
+}
+
+/// Delete an order and drop it from its trader's open-order list.
+fn remove_order(env: &Env, trader: &Address, order_id: u64) {
     env.storage()
         .persistent()
         .remove(&TradingKey::Order(order_id));
@@ -237,8 +249,7 @@ fn cancel_limit_order_unguarded(
         .get(&TradingKey::TraderOrders(trader.clone()))
         .unwrap_or_else(|| Vec::new(env));
     let mut new_ids: Vec<u64> = Vec::new(env);
-    for i in 0..ids.len() {
-        let oid = ids.get(i).unwrap();
+    for oid in ids.iter() {
         if oid != order_id {
             new_ids.push_back(oid);
         }
@@ -246,13 +257,43 @@ fn cancel_limit_order_unguarded(
     env.storage()
         .persistent()
         .set(&TradingKey::TraderOrders(trader.clone()), &new_ids);
+}
 
-    env.events().publish(
-        (symbol_short!("trade"), symbol_short!("cancel")),
-        (trader.clone(), order_id),
-    );
+/// Consume `quantity` units of an open order, as when a counterparty fills it.
+///
+/// The order's remaining quantity is reduced; once it reaches zero the order
+/// is removed exactly as a cancellation would. Returns the order as it was
+/// *before* the fill. Auth is the caller's responsibility: the counterparty
+/// consents by filling, the order owner consented when placing it.
+///
+/// Used by [`crate::dex_integration::sell_to_order`].
+pub(crate) fn fill_limit_order(
+    env: &Env,
+    order_id: u64,
+    quantity: i128,
+) -> Result<LimitOrder, TradingError> {
+    let order: LimitOrder = env
+        .storage()
+        .persistent()
+        .get(&TradingKey::Order(order_id))
+        .ok_or(TradingError::OrderNotFound)?;
 
-    Ok(())
+    if quantity <= 0 || quantity > order.quantity {
+        return Err(TradingError::InvalidQuantity);
+    }
+
+    let remaining = order.quantity - quantity;
+    if remaining == 0 {
+        remove_order(env, &order.trader, order_id);
+    } else {
+        let mut updated = order.clone();
+        updated.quantity = remaining;
+        env.storage()
+            .persistent()
+            .set(&TradingKey::Order(order_id), &updated);
+    }
+
+    Ok(order)
 }
 
 /// Get a limit order by ID.
@@ -298,6 +339,20 @@ fn record_trade_unguarded(
 ) -> Result<(), TradingError> {
     caller.require_auth();
 
+    push_trade_record(env, trade.clone());
+
+    env.events().publish(
+        (symbol_short!("trade"), symbol_short!("exec")),
+        (caller.clone(), trade.order_id, trade.price, trade.quantity),
+    );
+
+    Ok(())
+}
+
+/// Append `trade` to the history ring buffer, trimming the oldest records so
+/// at most [`MAX_HISTORY`] are kept. Emits nothing; callers publish their own
+/// event.
+pub(crate) fn push_trade_record(env: &Env, trade: TradeRecord) {
     let mut history: Vec<TradeRecord> = env
         .storage()
         .persistent()
@@ -314,17 +369,10 @@ fn record_trade_unguarded(
         history = trimmed;
     }
 
-    history.push_back(trade.clone());
+    history.push_back(trade);
     env.storage()
         .persistent()
         .set(&TradingKey::History, &history);
-
-    env.events().publish(
-        (symbol_short!("trade"), symbol_short!("exec")),
-        (caller.clone(), trade.order_id, trade.price, trade.quantity),
-    );
-
-    Ok(())
 }
 
 /// Return the full trading history (up to `MAX_HISTORY` records).

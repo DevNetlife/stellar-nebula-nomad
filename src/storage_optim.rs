@@ -578,6 +578,58 @@ pub fn get_ship_nebula_batch(
     Ok(out)
 }
 
+// ─── Expired-Data Pruning (Issue #441) ───────────────────────────────────
+
+/// Maximum cache namespaces swept by one [`prune_expired_data`] call.
+pub const MAX_PRUNE_NAMESPACES: u32 = 5;
+
+/// What one [`prune_expired_data`] call removed.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[contracttype]
+pub struct PruneReport {
+    /// Expired cache entries deleted across all swept namespaces.
+    pub cache_entries: u32,
+    /// Audit entries deleted under the retention policy.
+    pub audit_entries: u32,
+}
+
+/// Delete expired cache entries in `namespaces` and audit entries that fall
+/// outside the retention policy.
+///
+/// Permissionless maintenance: it only removes data its own module already
+/// considers dead, so any keeper may call it to keep storage (and rent) from
+/// growing. Each namespace and the audit log are swept with their module's
+/// per-call bound; call again while the report is non-zero.
+///
+/// # Errors
+/// [`StorageError::InvalidKey`] if more than [`MAX_PRUNE_NAMESPACES`]
+/// namespaces are passed.
+pub fn prune_expired_data(
+    env: &Env,
+    namespaces: &Vec<Symbol>,
+) -> Result<PruneReport, StorageError> {
+    if namespaces.len() > MAX_PRUNE_NAMESPACES {
+        return Err(StorageError::InvalidKey);
+    }
+
+    let mut cache_entries = 0u32;
+    for namespace in namespaces.iter() {
+        cache_entries += crate::cache_ttl_manager::clear_stale_entries(env, namespace);
+    }
+    let audit_entries =
+        crate::audit_logger::prune_audit_logs(env, crate::audit_logger::MAX_PRUNE_BATCH);
+
+    let report = PruneReport {
+        cache_entries,
+        audit_entries,
+    };
+    env.events().publish(
+        (symbol_short!("storage"), symbol_short!("pruned")),
+        (report.cache_entries, report.audit_entries),
+    );
+    Ok(report)
+}
+
 // ─── Value packing & bloom filter (Issue #482) ────────────────────────────
 //
 // Packing several small values into one `u128` turns N storage entries into
@@ -780,6 +832,80 @@ mod tests {
             assert_eq!(
                 get_optimized_entries(&env, keys),
                 Err(StorageError::BurstLimitExceeded)
+            );
+        });
+    }
+
+    #[test]
+    fn prune_expired_data_sweeps_cache_and_audit_log() {
+        use crate::audit_logger::{
+            log_audit_event, oldest_audit_id, AuditLoggerKey, RetentionPolicy,
+        };
+        use crate::cache_ttl_manager::{cache_with_ttl, get_cache_stats};
+        use soroban_sdk::testutils::Ledger;
+        use soroban_sdk::{Bytes, BytesN};
+
+        let env = Env::default();
+        let id = host(&env);
+        let ns = symbol_short!("prices");
+        env.ledger().set_timestamp(1_000);
+        env.as_contract(&id, || {
+            env.storage().instance().set(
+                &AuditLoggerKey::Retention,
+                &RetentionPolicy {
+                    max_age_secs: 10,
+                    max_entries: 100,
+                },
+            );
+            let bytes = Bytes::from_array(&env, &[1; 4]);
+            cache_with_ttl(&env, ns.clone(), symbol_short!("old"), bytes.clone(), 5).unwrap();
+            cache_with_ttl(&env, ns.clone(), symbol_short!("live"), bytes, 1_000).unwrap();
+            log_audit_event(
+                &env,
+                None,
+                symbol_short!("a"),
+                BytesN::from_array(&env, &[0; 128]),
+            )
+            .unwrap();
+        });
+
+        env.ledger().set_timestamp(1_020);
+        env.as_contract(&id, || {
+            let report = prune_expired_data(&env, &soroban_sdk::vec![&env, ns.clone()]).unwrap();
+            assert_eq!(
+                report,
+                PruneReport {
+                    cache_entries: 1,
+                    audit_entries: 1
+                }
+            );
+            assert_eq!(get_cache_stats(&env, ns.clone()), (1, 0));
+            assert_eq!(oldest_audit_id(&env), 1);
+
+            // A second sweep has nothing left to do.
+            let again = prune_expired_data(&env, &soroban_sdk::vec![&env, ns.clone()]).unwrap();
+            assert_eq!(
+                again,
+                PruneReport {
+                    cache_entries: 0,
+                    audit_entries: 0
+                }
+            );
+        });
+    }
+
+    #[test]
+    fn prune_expired_data_caps_namespace_count() {
+        let env = Env::default();
+        let id = host(&env);
+        env.as_contract(&id, || {
+            let mut namespaces = Vec::new(&env);
+            for _ in 0..=MAX_PRUNE_NAMESPACES {
+                namespaces.push_back(symbol_short!("ns"));
+            }
+            assert_eq!(
+                prune_expired_data(&env, &namespaces),
+                Err(StorageError::InvalidKey)
             );
         });
     }

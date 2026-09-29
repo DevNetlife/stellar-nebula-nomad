@@ -68,7 +68,7 @@ impl StandardContractError for BatchError {
 // ─── Data Types ───────────────────────────────────────────────────────────
 
 /// Types of operations that can be batched.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[contracttype]
 pub enum BatchOpType {
     /// Upgrade a ship's stats.
@@ -423,7 +423,7 @@ pub fn execute_batch_trade(
 
     for i in 0..trades.len() {
         if let Some((_from, _to, amount)) = trades.get(i) {
-            total_value = total_value.saturating_add(amount as u128);
+            total_value = total_value.saturating_add(u128::from(amount));
             succeeded += 1;
         } else {
             failed += 1;

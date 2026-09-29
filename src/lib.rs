@@ -99,6 +99,7 @@ mod gas_sponsor;
 mod cache_ttl_manager;
 mod metrics_exporter;
 mod migration_framework;
+pub mod cache_ttl_manager;
 mod state_snapshot;
 mod storage_optim;
 
@@ -207,6 +208,9 @@ pub use batch_processor::{
     clear_batch, execute_batch, get_player_batch, queue_batch_operation, BatchError, BatchOp,
     BatchOpType, BatchResult, MAX_BATCH_SIZE,
 };
+pub use dex_integration::{
+    buy_offer, cancel_listing, get_open_offers, harvest_and_list, list_at_market, list_resource,
+    sell_to_order, DexFill, DynamicListError, OfferPage, MAX_OFFER_PAGE, MAX_OFFER_SCAN,
 pub use bounty_board::{
     claim_bounty, get_bounty, initialize_bounty_board, post_bounty, set_bounty_expiry, Bounty,
     BountyError, DEFAULT_BOUNTY_EXPIRY, MAX_ACTIVE_BOUNTIES,
@@ -216,10 +220,6 @@ pub use contract_versioning::{
     is_auto_migrate_enabled, migrate_data, set_auto_migrate, MigrationRecord, VersioningError,
     CURRENT_VERSION, MIGRATION_BATCH_SIZE,
 };
-pub use dex_integration::{cancel_listing, harvest_and_list, list_at_market, DynamicListError};
-pub use difficulty_scaler::{
-    apply_scaling_to_layout, calculate_difficulty, DifficultyError, DifficultyResult,
-    RarityWeights, MAX_LEVEL,
 };
 pub use dynamic_pricing::{
     deviation_bps, dynamic_price, ema_step, get_price_state, get_pricing_config,
@@ -280,6 +280,15 @@ pub use escrow_trader::{
     cancel_escrow, complete_escrow, confirm_escrow, get_escrow, initiate_escrow, Escrow,
     EscrowError, EscrowResult, TradeAsset,
 };
+pub use audit_logger::{
+    get_audit_count, get_audit_retention, get_retained_audit_count, log_audit_event,
+    oldest_audit_id, prune_audit_logs, query_audit_logs, set_audit_retention, AuditEntry,
+    AuditLoggerError, RetentionPolicy, DEFAULT_AUDIT_RETENTION_SECS, DEFAULT_MAX_AUDIT_ENTRIES,
+    MAX_QUERY_LIMIT,
+};
+pub use sustainability_metrics::{claim_sustainability_reward, get_footprint, record_transaction_footprint, FootprintRecord, SustainabilityError};
+pub use anomaly_classifier::{classify_anomaly, classify_batch, get_classification, refine_classification, AnomalyError, ClassificationRecord};
+pub use shared_lib::{calculate_yield, validate_address, SharedError};
 pub use gas_sponsor::{
     claim_sponsorship_fund, get_admin, get_config, get_daily_count, get_fund_balance,
     get_remaining_daily_slots, has_been_sponsored, initialize as initialize_sponsorship,
@@ -310,6 +319,25 @@ pub use yield_forecast::{
     MAX_HISTORY_POINTS,
 };
 
+pub use storage_optim::{
+    store_with_bump, get_optimized_entry, batch_store_with_bump, guard_reentrancy,
+    release_guard, store_ship_nebula, get_ship_nebula, initialize_bump_config,
+    update_bump_config, get_bump_config, set_upgrade_target, get_upgrade_target,
+    reset_burst_counter, get_optimized_entries, get_ship_nebula_batch, StorageError,
+    OptimizedEntry, ShipNebulaData, OptimResult, BumpConfig, CachedEntry, StorageTier,
+    DEFAULT_BUMP_TTL, MAX_BUMP_TTL, MAX_BURST_READS, pack_u32x3, unpack_u32x3, pack_u64x2,
+    unpack_u64x2, bloom_insert, bloom_may_contain, prune_expired_data, PruneReport,
+    MAX_PRUNE_NAMESPACES,
+};
+pub use state_snapshot::{
+    take_snapshot, restore_from_snapshot, get_snapshot, get_ship_snapshots,
+    auto_snapshot, reset_session_count, StateSnapshot, SnapshotError,
+    RestoreResult, MAX_SNAPSHOTS_PER_SESSION, SNAPSHOT_TTL, AUTO_SNAPSHOT_INTERVAL,
+};
+pub use prize_distributor::{
+    initialize_prize_distributor, fund_prize_pool, submit_leaderboard_snapshot,
+    distribute_weekly_prizes, get_prize_pool, get_total_distributed, get_last_reset,
+    PrizeError, PrizeRecord, WEEK_SECONDS, MAX_PAYOUT_POSITIONS,
 pub use alliance_manager::{
     contribute_to_treasury, found_alliance, get_alliance, get_alliance_treasury,
     get_member_contribution, get_player_alliance, join_alliance, leave_alliance, Alliance,
@@ -1386,6 +1414,56 @@ impl NebulaNomadContract {
         dex_integration::cancel_listing(&env, &owner, offer_id)
     }
 
+    /// List `amount` units of an already-held resource on the DEX.
+    pub fn list_resource(
+        env: Env,
+        seller: Address,
+        resource: Symbol,
+        amount: u32,
+        min_price: i128,
+    ) -> Result<dex_integration::DexOffer, dex_integration::HarvestError> {
+        dex_integration::list_resource(&env, &seller, &resource, amount, min_price)
+    }
+
+    /// Buy `amount` units from a DEX offer, paying at most `max_price` per unit.
+    pub fn buy_offer(
+        env: Env,
+        buyer: Address,
+        offer_id: u64,
+        amount: u32,
+        max_price: i128,
+    ) -> Result<dex_integration::DexFill, dex_integration::HarvestError> {
+        dex_integration::buy_offer(&env, &buyer, offer_id, amount, max_price)
+    }
+
+    /// Sell `amount` units into an open buy limit order, receiving at least
+    /// `min_price` per unit.
+    pub fn sell_to_order(
+        env: Env,
+        seller: Address,
+        order_id: u64,
+        resource: Symbol,
+        amount: u32,
+        min_price: i128,
+    ) -> Result<dex_integration::DexFill, dex_integration::HarvestError> {
+        dex_integration::sell_to_order(&env, &seller, order_id, &resource, amount, min_price)
+    }
+
+    /// Read a DEX offer by ID.
+    pub fn get_dex_offer(env: Env, offer_id: u64) -> Option<dex_integration::DexOffer> {
+        dex_integration::get_offer(&env, offer_id)
+    }
+
+    /// Page through active DEX offers, optionally filtered by resource.
+    pub fn get_open_offers(
+        env: Env,
+        resource: Option<Symbol>,
+        start_after: u64,
+        limit: u32,
+    ) -> dex_integration::OfferPage {
+        dex_integration::get_open_offers(&env, resource.as_ref(), start_after, limit)
+    }
+
     // ─── Treasure Vault ───────────────────────────────────────────────────
 
     /// Deposit resources into a time-locked treasure vault.
@@ -2240,6 +2318,31 @@ impl NebulaNomadContract {
 
     pub fn get_audit_count(env: Env) -> u64 {
         audit_logger::get_audit_count(&env)
+    }
+
+    /// Number of audit entries currently stored (after pruning).
+    pub fn get_retained_audit_count(env: Env) -> u64 {
+        audit_logger::get_retained_audit_count(&env)
+    }
+
+    /// Active audit-log retention policy.
+    pub fn get_audit_retention(env: Env) -> RetentionPolicy {
+        audit_logger::get_audit_retention(&env)
+    }
+
+    /// Replace the audit-log retention policy. Admin role required.
+    pub fn set_audit_retention(
+        env: Env,
+        admin: Address,
+        policy: RetentionPolicy,
+    ) -> Result<(), AuditLoggerError> {
+        audit_logger::set_audit_retention(&env, &admin, &policy)
+    }
+
+    /// Delete expired cache entries in `namespaces` and audit entries outside
+    /// the retention policy. Permissionless and bounded per call.
+    pub fn prune_expired_data(env: Env, namespaces: Vec<Symbol>) -> Result<PruneReport, StorageError> {
+        storage_optim::prune_expired_data(&env, &namespaces)
     }
 
     // ─── Sustainability and Carbon Tracking (Issue #68) ──────────────────
