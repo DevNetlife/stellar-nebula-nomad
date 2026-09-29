@@ -86,7 +86,7 @@ mod storage_optim;
 mod state_snapshot;
 mod metrics_exporter;
 mod migration_framework;
-mod cache_ttl_manager;
+pub mod cache_ttl_manager;
 
 mod prize_distributor;
 mod portal_registry;
@@ -267,7 +267,12 @@ pub use escrow_trader::{
     cancel_escrow, complete_escrow, confirm_escrow, get_escrow, initiate_escrow, Escrow,
     EscrowError, EscrowResult, TradeAsset,
 };
-pub use audit_logger::{AuditEntry, AuditLoggerError, MAX_QUERY_LIMIT, get_audit_count, log_audit_event, query_audit_logs};
+pub use audit_logger::{
+    get_audit_count, get_audit_retention, get_retained_audit_count, log_audit_event,
+    oldest_audit_id, prune_audit_logs, query_audit_logs, set_audit_retention, AuditEntry,
+    AuditLoggerError, RetentionPolicy, DEFAULT_AUDIT_RETENTION_SECS, DEFAULT_MAX_AUDIT_ENTRIES,
+    MAX_QUERY_LIMIT,
+};
 pub use sustainability_metrics::{claim_sustainability_reward, get_footprint, record_transaction_footprint, FootprintRecord, SustainabilityError};
 pub use anomaly_classifier::{classify_anomaly, classify_batch, get_classification, refine_classification, AnomalyError, ClassificationRecord};
 pub use shared_lib::{calculate_yield, validate_address, SharedError};
@@ -300,7 +305,8 @@ pub use storage_optim::{
     reset_burst_counter, get_optimized_entries, get_ship_nebula_batch, StorageError,
     OptimizedEntry, ShipNebulaData, OptimResult, BumpConfig, CachedEntry, StorageTier,
     DEFAULT_BUMP_TTL, MAX_BUMP_TTL, MAX_BURST_READS, pack_u32x3, unpack_u32x3, pack_u64x2,
-    unpack_u64x2, bloom_insert, bloom_may_contain,
+    unpack_u64x2, bloom_insert, bloom_may_contain, prune_expired_data, PruneReport,
+    MAX_PRUNE_NAMESPACES,
 };
 pub use state_snapshot::{
     take_snapshot, restore_from_snapshot, get_snapshot, get_ship_snapshots,
@@ -2036,6 +2042,31 @@ impl NebulaNomadContract {
 
     pub fn get_audit_count(env: Env) -> u64 {
         audit_logger::get_audit_count(&env)
+    }
+
+    /// Number of audit entries currently stored (after pruning).
+    pub fn get_retained_audit_count(env: Env) -> u64 {
+        audit_logger::get_retained_audit_count(&env)
+    }
+
+    /// Active audit-log retention policy.
+    pub fn get_audit_retention(env: Env) -> RetentionPolicy {
+        audit_logger::get_audit_retention(&env)
+    }
+
+    /// Replace the audit-log retention policy. Admin role required.
+    pub fn set_audit_retention(
+        env: Env,
+        admin: Address,
+        policy: RetentionPolicy,
+    ) -> Result<(), AuditLoggerError> {
+        audit_logger::set_audit_retention(&env, &admin, &policy)
+    }
+
+    /// Delete expired cache entries in `namespaces` and audit entries outside
+    /// the retention policy. Permissionless and bounded per call.
+    pub fn prune_expired_data(env: Env, namespaces: Vec<Symbol>) -> Result<PruneReport, StorageError> {
+        storage_optim::prune_expired_data(&env, &namespaces)
     }
 
     // ─── Sustainability and Carbon Tracking (Issue #68) ──────────────────
