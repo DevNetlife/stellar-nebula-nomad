@@ -145,8 +145,8 @@ pub const MAX_GUILD_BOARD_ENTRIES: u32 = 50;
 pub const DEFAULT_PAGE_SIZE: u32 = 20;
 /// Largest page a caller may request — keeps a single read bounded.
 pub const MAX_PAGE_SIZE: u32 = 50;
-pub const WEEKLY_DURATION: u64 = 604800;
-pub const MONTHLY_DURATION: u64 = 2592000;
+pub const WEEKLY_DURATION: u64 = 604_800;
+pub const MONTHLY_DURATION: u64 = 2_592_000;
 
 // ── Categories (10+) ─────────────────────────────────────────────────────────
 
@@ -686,7 +686,8 @@ pub fn reset_seasonal_leaderboard(
         .unwrap_or_else(|| Vec::new(env));
 
     let archive_season = season_id as u32;
-    let archive_key = LeaderboardDataKey::Archive(category.clone(), period_sym.clone(), archive_season);
+    let archive_key =
+        LeaderboardDataKey::Archive(category.clone(), period_sym.clone(), archive_season);
     env.storage().persistent().set(&archive_key, &entries);
 
     // Clear the live board.
@@ -695,17 +696,16 @@ pub fn reset_seasonal_leaderboard(
 
     // Bump the season counter for this (category, seasonal) key.
     let next_season = archive_season + 1;
-    env.storage()
-        .persistent()
-        .set(&LeaderboardDataKey::Season(category.clone(), period_sym.clone()), &next_season);
+    env.storage().persistent().set(
+        &LeaderboardDataKey::Season(category.clone(), period_sym.clone()),
+        &next_season,
+    );
 
     // Record reset timestamp.
-    env.storage()
-        .persistent()
-        .set(
-            &LeaderboardDataKey::LastReset(category.clone(), period_sym.clone()),
-            &env.ledger().timestamp(),
-        );
+    env.storage().persistent().set(
+        &LeaderboardDataKey::LastReset(category.clone(), period_sym.clone()),
+        &env.ledger().timestamp(),
+    );
 
     env.events().publish(
         (symbol_short!("lb"), symbol_short!("seas_rst")),
@@ -720,7 +720,9 @@ pub fn reset_seasonal_leaderboard(
 /// Copy `entries[start..end]`, clamped to the bounds of the list.
 fn take_range<T>(env: &Env, entries: &Vec<T>, start: u32, end: u32) -> Vec<T>
 where
-    T: Clone + soroban_sdk::IntoVal<Env, soroban_sdk::Val> + soroban_sdk::TryFromVal<Env, soroban_sdk::Val>,
+    T: Clone
+        + soroban_sdk::IntoVal<Env, soroban_sdk::Val>
+        + soroban_sdk::TryFromVal<Env, soroban_sdk::Val>,
 {
     let start = start.min(entries.len());
     let end = end.min(entries.len());
@@ -748,7 +750,9 @@ fn paginate<T>(
     page_size: u32,
 ) -> Result<(Vec<T>, PageMeta), LeaderboardError>
 where
-    T: Clone + soroban_sdk::IntoVal<Env, soroban_sdk::Val> + soroban_sdk::TryFromVal<Env, soroban_sdk::Val>,
+    T: Clone
+        + soroban_sdk::IntoVal<Env, soroban_sdk::Val>
+        + soroban_sdk::TryFromVal<Env, soroban_sdk::Val>,
 {
     if page_size == 0 || page_size > MAX_PAGE_SIZE {
         return Err(LeaderboardError::InvalidPagination);
@@ -1237,8 +1241,14 @@ mod tests {
         env.as_contract(&contract_id, || {
             for i in 0..5u32 {
                 let player = Address::generate(&env);
-                update_score(&env, &player, category.clone(), period.clone(), u64::from(i + 1) * 10)
-                    .unwrap();
+                update_score(
+                    &env,
+                    &player,
+                    category.clone(),
+                    period.clone(),
+                    u64::from(i + 1) * 10,
+                )
+                .unwrap();
             }
 
             let (page0, meta0) =
@@ -1285,14 +1295,9 @@ mod tests {
                 get_leaderboard_page(&env, category.clone(), period.clone(), 0, 0).unwrap_err();
             assert_eq!(zero, LeaderboardError::InvalidPagination);
 
-            let too_large = get_leaderboard_page(
-                &env,
-                category.clone(),
-                period.clone(),
-                0,
-                MAX_PAGE_SIZE + 1,
-            )
-            .unwrap_err();
+            let too_large =
+                get_leaderboard_page(&env, category.clone(), period.clone(), 0, MAX_PAGE_SIZE + 1)
+                    .unwrap_err();
             assert_eq!(too_large, LeaderboardError::InvalidPagination);
         });
     }
@@ -1395,8 +1400,14 @@ mod tests {
 
             let global_player = Address::generate(&env);
             env.as_contract(&contract_id, || {
-                update_score(&env, &global_player, category.clone(), period.clone(), score)
-                    .unwrap();
+                update_score(
+                    &env,
+                    &global_player,
+                    category.clone(),
+                    period.clone(),
+                    score,
+                )
+                .unwrap();
             });
         }
 
@@ -1437,15 +1448,21 @@ mod tests {
         env.as_contract(&contract_id, || {
             for i in 0..4u32 {
                 let player = Address::generate(&env);
-                update_score(&env, &player, category.clone(), period.clone(), u64::from(i + 1))
-                    .unwrap();
+                update_score(
+                    &env,
+                    &player,
+                    category.clone(),
+                    period.clone(),
+                    u64::from(i + 1),
+                )
+                .unwrap();
             }
 
             let full = get_leaderboard(&env, category.clone(), period.clone(), 10).unwrap();
-            let (p0, m0) = get_leaderboard_page(&env, category.clone(), period.clone(), 0, 2)
-                .unwrap();
-            let (p1, m1) = get_leaderboard_page(&env, category.clone(), period.clone(), 1, 2)
-                .unwrap();
+            let (p0, m0) =
+                get_leaderboard_page(&env, category.clone(), period.clone(), 0, 2).unwrap();
+            let (p1, m1) =
+                get_leaderboard_page(&env, category.clone(), period.clone(), 1, 2).unwrap();
 
             assert_eq!(full.len(), 4);
             assert_eq!(p0.len() + p1.len(), full.len());
