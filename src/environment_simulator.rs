@@ -3,14 +3,7 @@
 use soroban_sdk::{contracterror, contracttype, symbol_short, Env, Symbol};
 
 const ENVIRONMENTAL_PRESETS: [&str; 8] = [
-    "calm",
-    "storm",
-    "radiate",
-    "dense",
-    "sparse",
-    "charged",
-    "temporal",
-    "void",
+    "calm", "storm", "radiate", "dense", "sparse", "charged", "temporal", "void",
 ];
 
 #[derive(Clone)]
@@ -63,21 +56,24 @@ pub struct ModifierResult {
     pub adjusted_yield: i32,
 }
 
-pub fn simulate_conditions(env: &Env, nebula_id: u64) -> Result<EnvironmentCondition, EnvironmentError> {
+pub fn simulate_conditions(
+    env: &Env,
+    nebula_id: u64,
+) -> Result<EnvironmentCondition, EnvironmentError> {
     if nebula_id == 0 {
         return Err(EnvironmentError::InvalidNebula);
     }
 
     let ledger_seq = env.ledger().sequence();
     let timestamp = env.ledger().timestamp();
-    
+
     let seed = (ledger_seq as u64)
         .wrapping_mul(timestamp)
         .wrapping_add(nebula_id);
-    
+
     let condition_index = (seed % 8) as usize;
     let condition_name = ENVIRONMENTAL_PRESETS[condition_index];
-    
+
     let condition_symbol = match condition_name {
         "calm" => symbol_short!("calm"),
         "storm" => symbol_short!("storm"),

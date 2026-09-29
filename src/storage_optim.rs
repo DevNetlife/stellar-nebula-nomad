@@ -1,6 +1,6 @@
 use soroban_sdk::{
-    contracterror, contracttype, symbol_short, Address, BytesN, Env, IntoVal, Symbol,
-    TryFromVal, Val, Vec,
+    contracterror, contracttype, symbol_short, Address, BytesN, Env, IntoVal, Symbol, TryFromVal,
+    Val, Vec,
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────
@@ -306,10 +306,7 @@ pub fn store_with_bump(
 }
 
 /// Retrieve an optimized entry by key with burst tracking.
-pub fn get_optimized_entry(
-    env: &Env,
-    key: Symbol,
-) -> Result<OptimizedEntry, StorageError> {
+pub fn get_optimized_entry(env: &Env, key: Symbol) -> Result<OptimizedEntry, StorageError> {
     track_burst_read(env)?;
 
     env.storage()
@@ -384,9 +381,7 @@ fn track_burst_read(env: &Env) -> Result<(), StorageError> {
 /// instead of a read and a write per item. Used by the batch getters.
 fn track_burst_reads(env: &Env, n: u32) -> Result<(), StorageError> {
     let instance = env.storage().instance();
-    let count: u32 = instance
-        .get(&StorageKey::BurstReadCounter)
-        .unwrap_or(0);
+    let count: u32 = instance.get(&StorageKey::BurstReadCounter).unwrap_or(0);
 
     // Reject if any of the `n` reads would cross the limit.
     let new_count = count.saturating_add(n);
@@ -469,30 +464,22 @@ pub fn get_bump_config(env: &Env) -> BumpConfig {
 // ─── Proxy / Upgrade Pattern ──────────────────────────────────────────────
 
 /// Set the upgrade target address for future proxy-based migrations.
-pub fn set_upgrade_target(
-    env: &Env,
-    admin: &Address,
-    target: Address,
-) -> Result<(), StorageError> {
+pub fn set_upgrade_target(env: &Env, admin: &Address, target: Address) -> Result<(), StorageError> {
     admin.require_auth();
 
     env.storage()
         .instance()
         .set(&StorageKey::UpgradeTarget, &target);
 
-    env.events().publish(
-        (symbol_short!("storage"), symbol_short!("upgrade")),
-        target,
-    );
+    env.events()
+        .publish((symbol_short!("storage"), symbol_short!("upgrade")), target);
 
     Ok(())
 }
 
 /// Get the current upgrade target (if any).
 pub fn get_upgrade_target(env: &Env) -> Option<Address> {
-    env.storage()
-        .instance()
-        .get(&StorageKey::UpgradeTarget)
+    env.storage().instance().get(&StorageKey::UpgradeTarget)
 }
 
 // ─── Batch Optimization ──────────────────────────────────────────────────
@@ -732,7 +719,10 @@ mod tests {
         let id = host(&env);
         env.as_contract(&id, || {
             guard_reentrancy(&env).unwrap();
-            assert_eq!(guard_reentrancy(&env), Err(StorageError::ReentrancyDetected));
+            assert_eq!(
+                guard_reentrancy(&env),
+                Err(StorageError::ReentrancyDetected)
+            );
             release_guard(&env);
             assert!(!env.storage().instance().has(&StorageKey::ReentrancyGuard));
             assert!(guard_reentrancy(&env).is_ok());

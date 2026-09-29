@@ -12,9 +12,9 @@
 
 use soroban_sdk::{testutils::Address as _, Address, Env};
 use stellar_nebula_nomad::{
-    get_config, get_daily_count, get_fund_balance, get_remaining_daily_slots,
-    has_been_sponsored, initialize_sponsorship, mark_profile_verified, sponsor_first_scan,
-    update_config, NebulaNomadContract, SponsorError,
+    get_config, get_daily_count, get_fund_balance, get_remaining_daily_slots, has_been_sponsored,
+    initialize_sponsorship, mark_profile_verified, sponsor_first_scan, update_config,
+    NebulaNomadContract, SponsorError,
 };
 
 fn main() {

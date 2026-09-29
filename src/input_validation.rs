@@ -93,7 +93,7 @@ pub fn validate_string(
     _env: &Env,
     value: &String,
     max_length: u32,
-    field_name: &str,
+    _field_name: &str,
     allow_empty: bool,
 ) -> Result<(), ValidationError> {
     // Validate length
@@ -325,7 +325,10 @@ mod tests {
     fn test_empty_name_rejected() {
         let env = make_env();
         let name = String::from_str(&env, "");
-        assert_eq!(validate_name(&env, &name), Err(ValidationError::EmptyString));
+        assert_eq!(
+            validate_name(&env, &name),
+            Err(ValidationError::EmptyString)
+        );
     }
 
     #[test]
@@ -333,7 +336,10 @@ mod tests {
         let env = make_env();
         let long = "A".repeat(65);
         let name = String::from_str(&env, &long);
-        assert_eq!(validate_name(&env, &name), Err(ValidationError::StringTooLong));
+        assert_eq!(
+            validate_name(&env, &name),
+            Err(ValidationError::StringTooLong)
+        );
     }
 
     #[test]
@@ -348,21 +354,30 @@ mod tests {
     fn test_control_char_rejected() {
         let env = make_env();
         let name = String::from_str(&env, "Test\x01Name");
-        assert_eq!(validate_name(&env, &name), Err(ValidationError::InvalidCharacters));
+        assert_eq!(
+            validate_name(&env, &name),
+            Err(ValidationError::InvalidCharacters)
+        );
     }
 
     #[test]
     fn test_null_byte_rejected() {
         let env = make_env();
         let name = String::from_str(&env, "Test\0Name");
-        assert_eq!(validate_name(&env, &name), Err(ValidationError::InvalidCharacters));
+        assert_eq!(
+            validate_name(&env, &name),
+            Err(ValidationError::InvalidCharacters)
+        );
     }
 
     #[test]
     fn test_del_char_rejected() {
         let env = make_env();
         let name = String::from_str(&env, "Test\x7fName");
-        assert_eq!(validate_name(&env, &name), Err(ValidationError::InvalidCharacters));
+        assert_eq!(
+            validate_name(&env, &name),
+            Err(ValidationError::InvalidCharacters)
+        );
     }
 
     #[test]
@@ -376,7 +391,10 @@ mod tests {
     fn test_description_over_max_length_rejected() {
         let env = make_env();
         let desc = String::from_str(&env, &"A".repeat(513));
-        assert_eq!(validate_description(&env, &desc), Err(ValidationError::StringTooLong));
+        assert_eq!(
+            validate_description(&env, &desc),
+            Err(ValidationError::StringTooLong)
+        );
     }
 
     #[test]
@@ -399,7 +417,10 @@ mod tests {
     fn test_invalid_cid_too_short() {
         let env = make_env();
         let cid = String::from_str(&env, "Qm");
-        assert_eq!(validate_cid(&env, &cid), Err(ValidationError::InvalidCidFormat));
+        assert_eq!(
+            validate_cid(&env, &cid),
+            Err(ValidationError::InvalidCidFormat)
+        );
     }
 
     #[test]

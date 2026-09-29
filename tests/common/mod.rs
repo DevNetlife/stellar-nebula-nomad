@@ -37,7 +37,7 @@ pub fn setup_env() -> (Env, Address) {
 /// Creates a full environment with a deployed contract and client.
 pub fn setup_contract() -> (Env, NebulaNomadContractClient<'static>, Address) {
     let (env, admin) = setup_env();
-    let contract_id = env.register_contract(None, stellar_nebula_nomad::NebulaNomadContract);
+    let contract_id = env.register(stellar_nebula_nomad::NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     // Safety: the client is created locally and used within the same test function.
     let client_static = unsafe { core::mem::transmute::<_, NebulaNomadContractClient<'static>>(client) };

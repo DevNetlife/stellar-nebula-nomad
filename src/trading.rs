@@ -242,6 +242,7 @@ fn remove_order(env: &Env, trader: &Address, order_id: u64) {
         .persistent()
         .remove(&TradingKey::Order(order_id));
 
+    // Remove from trader's order list
     let ids: Vec<u64> = env
         .storage()
         .persistent()

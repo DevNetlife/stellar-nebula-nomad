@@ -205,7 +205,11 @@ pub fn get_repair_config(env: &Env) -> RepairConfig {
 
 /// Seed the repair sink admin so pricing can be retuned later. Admin-only,
 /// once. Optional: the sink works on defaults without it.
-pub fn init_repair_config(env: &Env, admin: &Address, config: RepairConfig) -> Result<(), ShipRepairError> {
+pub fn init_repair_config(
+    env: &Env,
+    admin: &Address,
+    config: RepairConfig,
+) -> Result<(), ShipRepairError> {
     if env.storage().instance().has(&RepairKey::Admin) {
         return Err(ShipRepairError::InvalidConfig);
     }
@@ -341,13 +345,19 @@ pub fn repair_ship(
         .instance()
         .set(&RepairKey::TotalBurned, &total.saturating_add(cost));
 
+    // One event carries both the payment and the resulting durability change,
+    // so a repair costs a single event instead of two.
     env.events().publish(
-        (symbol_short!("ship_rep"), symbol_short!("paid")),
-        (ship_id, player.clone(), asset_id.clone(), cost, emergency),
-    );
-    env.events().publish(
-        (symbol_short!("ship_rep"), symbol_short!("durbl")),
-        (durability_before, durability_after),
+        (symbol_short!("ship_rep"), symbol_short!("repaired")),
+        (
+            ship_id,
+            player.clone(),
+            asset_id.clone(),
+            cost,
+            emergency,
+            durability_before,
+            durability_after,
+        ),
     );
 
     Ok(RepairReceipt {
@@ -422,7 +432,9 @@ mod tests {
             metadata_uri: soroban_sdk::Bytes::new(env),
         };
         in_contract(env, id, || {
-            env.storage().persistent().set(&DataKey::Ship(ship_id), &ship);
+            env.storage()
+                .persistent()
+                .set(&DataKey::Ship(ship_id), &ship);
         });
     }
 
@@ -436,14 +448,14 @@ mod tests {
 
     fn read_dust(env: &Env, id: &Address, player: &Address) -> u32 {
         let key = ResourceKey::ResourceBalance(player.clone(), symbol_short!("dust"));
-        in_contract(env, id, || {
-            env.storage().instance().get(&key).unwrap_or(0)
-        })
+        in_contract(env, id, || env.storage().instance().get(&key).unwrap_or(0))
     }
 
     fn read_durability(env: &Env, id: &Address, ship_id: u64) -> u32 {
         in_contract(env, id, || {
-            ship_nft::get_ship(env, ship_id).map(|s| s.durability).unwrap_or(0)
+            ship_nft::get_ship(env, ship_id)
+                .map(|s| s.durability)
+                .unwrap_or(0)
         })
     }
 
@@ -496,8 +508,9 @@ mod tests {
         seed_ship(&env, &id, 1, &player, 60); // 40 missing, under the per-call cap
         seed_dust(&env, &id, &player, 1_000);
 
-        let receipt =
-            in_contract(&env, &id, || repair_ship(&env, &player, 1, symbol_short!("dust"), false).unwrap());
+        let receipt = in_contract(&env, &id, || {
+            repair_ship(&env, &player, 1, symbol_short!("dust"), false).unwrap()
+        });
 
         assert_eq!(receipt.durability_before, 60);
         assert_eq!(receipt.durability_after, 100);
@@ -513,8 +526,9 @@ mod tests {
         seed_ship(&env, &id, 1, &player, 0); // 100 missing, cap is 50
         seed_dust(&env, &id, &player, 10_000);
 
-        let receipt =
-            in_contract(&env, &id, || repair_ship(&env, &player, 1, symbol_short!("dust"), false).unwrap());
+        let receipt = in_contract(&env, &id, || {
+            repair_ship(&env, &player, 1, symbol_short!("dust"), false).unwrap()
+        });
 
         assert_eq!(receipt.durability_after, DEFAULT_MAX_REPAIR_PER_CALL);
         assert_eq!(receipt.resource_burned, DEFAULT_MAX_REPAIR_PER_CALL * 2);
@@ -526,8 +540,9 @@ mod tests {
         seed_ship(&env, &id, 1, &player, 60);
         seed_dust(&env, &id, &player, 10_000);
 
-        let receipt =
-            in_contract(&env, &id, || repair_ship(&env, &player, 1, symbol_short!("dust"), true).unwrap());
+        let receipt = in_contract(&env, &id, || {
+            repair_ship(&env, &player, 1, symbol_short!("dust"), true).unwrap()
+        });
 
         assert!(receipt.emergency);
         assert_eq!(receipt.durability_after, 100);
@@ -542,7 +557,13 @@ mod tests {
         seed_dust(&env, &id, &player, 10_000);
 
         assert_eq!(
-            in_contract(&env, &id, || repair_ship(&env, &player, 1, symbol_short!("dust"), false)),
+            in_contract(&env, &id, || repair_ship(
+                &env,
+                &player,
+                1,
+                symbol_short!("dust"),
+                false
+            )),
             Err(ShipRepairError::ShipAlreadyFull)
         );
         // Nothing was burned — a no-op repair must not act as a free sink.
@@ -557,7 +578,13 @@ mod tests {
         seed_dust(&env, &id, &player, 10); // needs 80
 
         assert_eq!(
-            in_contract(&env, &id, || repair_ship(&env, &player, 1, symbol_short!("dust"), false)),
+            in_contract(&env, &id, || repair_ship(
+                &env,
+                &player,
+                1,
+                symbol_short!("dust"),
+                false
+            )),
             Err(ShipRepairError::InsufficientResources)
         );
         assert_eq!(read_durability(&env, &id, 1), 60, "hull must be untouched");
@@ -586,7 +613,13 @@ mod tests {
     fn repairing_an_unknown_ship_is_not_found() {
         let (env, id, player) = setup();
         assert_eq!(
-            in_contract(&env, &id, || repair_ship(&env, &player, 99, symbol_short!("dust"), false)),
+            in_contract(&env, &id, || repair_ship(
+                &env,
+                &player,
+                99,
+                symbol_short!("dust"),
+                false
+            )),
             Err(ShipRepairError::ShipNotFound)
         );
     }
@@ -638,7 +671,13 @@ mod tests {
         assert_eq!(read_durability(&env, &id, 1), 90);
 
         assert_eq!(
-            in_contract(&env, &id, || repair_ship(&env, &player, 1, symbol_short!("dust"), false)),
+            in_contract(&env, &id, || repair_ship(
+                &env,
+                &player,
+                1,
+                symbol_short!("dust"),
+                false
+            )),
             Err(ShipRepairError::RateLimitExceeded)
         );
     }
@@ -664,8 +703,9 @@ mod tests {
         assert_eq!(quote.restore_points, 40);
         assert_eq!(quote.resource_cost, 80);
 
-        let receipt =
-            in_contract(&env, &id, || repair_ship(&env, &player, 1, symbol_short!("dust"), false).unwrap());
+        let receipt = in_contract(&env, &id, || {
+            repair_ship(&env, &player, 1, symbol_short!("dust"), false).unwrap()
+        });
         assert_eq!(receipt.resource_burned, quote.resource_cost);
     }
 
@@ -742,13 +782,17 @@ mod tests {
             )
             .unwrap();
         });
-        assert_eq!(in_contract(&env, &id, || get_repair_config(&env).cost_per_point), 5);
+        assert_eq!(
+            in_contract(&env, &id, || get_repair_config(&env).cost_per_point),
+            5
+        );
 
         // 10 missing points x 5 = 50, and the surcharge is now zero.
         seed_ship(&env, &id, 1, &player, 90);
         seed_dust(&env, &id, &player, 1_000);
-        let receipt =
-            in_contract(&env, &id, || repair_ship(&env, &player, 1, symbol_short!("dust"), true).unwrap());
+        let receipt = in_contract(&env, &id, || {
+            repair_ship(&env, &player, 1, symbol_short!("dust"), true).unwrap()
+        });
         assert_eq!(receipt.resource_burned, 50);
     }
 
@@ -784,8 +828,16 @@ mod tests {
         let (env, id, _player) = setup();
         let admin = Address::generate(&env);
         for bad in [
-            RepairConfig { cost_per_point: 0, emergency_surcharge_bps: 0, max_repair_per_call: 10 },
-            RepairConfig { cost_per_point: 1, emergency_surcharge_bps: 0, max_repair_per_call: 0 },
+            RepairConfig {
+                cost_per_point: 0,
+                emergency_surcharge_bps: 0,
+                max_repair_per_call: 10,
+            },
+            RepairConfig {
+                cost_per_point: 1,
+                emergency_surcharge_bps: 0,
+                max_repair_per_call: 0,
+            },
             RepairConfig {
                 cost_per_point: 1,
                 emergency_surcharge_bps: 1_000_000,
@@ -843,4 +895,3 @@ mod tests {
         assert_eq!(format!("{:?}", Operation::ShipRepair), "ShipRepair");
     }
 }
-

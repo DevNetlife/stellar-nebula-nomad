@@ -1,12 +1,13 @@
 #![cfg(test)]
 
 use soroban_sdk::{
+    symbol_short,
     testutils::{Address as _, Ledger, LedgerInfo},
-    symbol_short, Address, Bytes, BytesN, Env,
+    Address, Bytes, BytesN, Env,
 };
 use stellar_nebula_nomad::{
     NebulaNomadContract, NebulaNomadContractClient, SnapshotError, StateSnapshot,
-    MAX_SNAPSHOTS_PER_SESSION, AUTO_SNAPSHOT_INTERVAL,
+    AUTO_SNAPSHOT_INTERVAL, MAX_SNAPSHOTS_PER_SESSION,
 };
 
 fn setup() -> (Env, NebulaNomadContractClient<'static>, Address) {
@@ -29,11 +30,7 @@ fn setup() -> (Env, NebulaNomadContractClient<'static>, Address) {
 }
 
 /// Helper: Mint a ship so snapshot tests have valid ship data.
-fn mint_test_ship(
-    env: &Env,
-    client: &NebulaNomadContractClient<'static>,
-    owner: &Address,
-) -> u64 {
+fn mint_test_ship(env: &Env, client: &NebulaNomadContractClient<'static>, owner: &Address) -> u64 {
     let ship_type = symbol_short!("explorer");
     let metadata = Bytes::from_slice(env, &[0u8; 8]);
     let ship = client.mint_ship(owner, &ship_type, &metadata);

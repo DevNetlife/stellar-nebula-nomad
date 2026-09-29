@@ -152,9 +152,13 @@ pub fn deposit_to_pool_v2(
         .get::<_, u64>(&symbol_short!("next_pid"))
         .unwrap_or(0);
 
-    let penalty_bps = if lock_period < 1000 { 2000 }
-        else if lock_period < 3000 { 1000 }
-        else { 0 };
+    let penalty_bps = if lock_period < 1000 {
+        2000
+    } else if lock_period < 3000 {
+        1000
+    } else {
+        0
+    };
 
     let pool = FarmPoolV2 {
         id: pool_id,
@@ -205,8 +209,8 @@ pub fn harvest_farm_rewards(env: Env, owner: Address, pool_id: u64) -> Result<i1
         return Ok(0);
     }
 
-    let reward =
-        calculate_farm_reward(pool.amount, elapsed, BASE_APY_BPS).ok_or(FarmError::ArithmeticOverflow)?;
+    let reward = calculate_farm_reward(pool.amount, elapsed, BASE_APY_BPS)
+        .ok_or(FarmError::ArithmeticOverflow)?;
 
     pool.last_harvest = now;
     env.storage().persistent().set(&pool_id, &pool);
@@ -324,7 +328,10 @@ pub fn withdraw_v2_with_penalty(env: Env, owner: Address, pool_id: u64) -> Resul
         .ok_or(FarmError::ArithmeticOverflow)?;
 
     let reward = harvest_v2_rewards(env.clone(), owner.clone(), pool_id)?;
-    let total = pool.amount.checked_add(reward).ok_or(FarmError::ArithmeticOverflow)?;
+    let total = pool
+        .amount
+        .checked_add(reward)
+        .ok_or(FarmError::ArithmeticOverflow)?;
 
     let final_amount = if now < unlock_at && pool.penalty_bps > 0 {
         let penalty = total * pool.penalty_bps as i128 / BPS_DENOMINATOR;
@@ -344,7 +351,11 @@ pub fn withdraw_v2_with_penalty(env: Env, owner: Address, pool_id: u64) -> Resul
 }
 
 pub fn get_yield_farm_stats(env: &Env) -> YieldFarmStats {
-    let ttl: i128 = env.storage().persistent().get(&DataKey::TotalLocked).unwrap_or(0);
+    let ttl: i128 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::TotalLocked)
+        .unwrap_or(0);
     YieldFarmStats {
         total_value_locked: ttl,
         active_pools: 0,
@@ -388,7 +399,10 @@ mod tests {
     #[test]
     fn test_calculate_farm_reward_overflow_reported_not_wrapped() {
         // i128::MAX * BASE_APY_BPS overflows the first checked_mul.
-        assert_eq!(calculate_farm_reward(i128::MAX, SECONDS_IN_YEAR, BASE_APY_BPS), None);
+        assert_eq!(
+            calculate_farm_reward(i128::MAX, SECONDS_IN_YEAR, BASE_APY_BPS),
+            None
+        );
     }
 
     proptest! {

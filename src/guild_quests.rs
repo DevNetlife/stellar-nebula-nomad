@@ -1,6 +1,6 @@
 use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbol, Vec};
 
-use crate::alliance_manager::{get_player_alliance, add_alliance_xp, credit_alliance_treasury};
+use crate::alliance_manager::{add_alliance_xp, credit_alliance_treasury, get_player_alliance};
 
 // ─── Data Types ───────────────────────────────────────────────────────────────
 
@@ -21,8 +21,8 @@ pub struct GuildQuest {
 #[derive(Clone)]
 #[contracttype]
 pub enum GuildQuestKey {
-    Quest(u64, u64),        // (alliance_id, quest_id) -> GuildQuest
-    QuestCount(u64),        // alliance_id -> u64
+    Quest(u64, u64), // (alliance_id, quest_id) -> GuildQuest
+    QuestCount(u64), // alliance_id -> u64
 }
 
 #[contracterror]
@@ -105,8 +105,8 @@ pub fn contribute_quest_progress(
     quest_type: Symbol,
     amount: u64,
 ) -> Result<(), GuildQuestError> {
-    let alliance_id = get_player_alliance(env, player.clone())
-        .ok_or(GuildQuestError::NotAllianceMember)?;
+    let alliance_id =
+        get_player_alliance(env, player.clone()).ok_or(GuildQuestError::NotAllianceMember)?;
 
     let count_key = GuildQuestKey::QuestCount(alliance_id);
     let total_quests = env.storage().persistent().get(&count_key).unwrap_or(0u64);
@@ -128,7 +128,12 @@ pub fn contribute_quest_progress(
 
                     env.events().publish(
                         (symbol_short!("g_quest"), symbol_short!("done")),
-                        (alliance_id, quest.quest_id, quest.reward_essence, quest.reward_xp),
+                        (
+                            alliance_id,
+                            quest.quest_id,
+                            quest.reward_essence,
+                            quest.reward_xp,
+                        ),
                     );
                 }
 

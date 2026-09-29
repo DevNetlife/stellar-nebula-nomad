@@ -1,6 +1,6 @@
 //! Blueprint creation and validation for craftable assets.
 //!
-use soroban_sdk::{contracttype, contracterror, symbol_short, Address, Env, Symbol, Vec};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbol, Vec};
 
 /// Maximum blueprints that can be crafted in a single batch transaction.
 pub const MAX_BATCH_CRAFT: u32 = 2;

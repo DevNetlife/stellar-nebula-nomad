@@ -569,11 +569,6 @@ pub fn rollover_season(
         .instance()
         .set(&SeasonKey::ArchivedSeason(season.id), &archive);
 
-    env.events().publish(
-        (symbol_short!("season"), symbol_short!("ended")),
-        (season.id, now, total_rewards),
-    );
-
     // Start the next season immediately with the theme derived from its new ID.
     let new_id = season.id + 1;
     let new_theme = SeasonTheme::from_season_id(new_id);
@@ -604,9 +599,11 @@ pub fn rollover_season(
         .instance()
         .set(&SeasonKey::SeasonCount, &new_id);
 
+    // A rollover is one atomic transition (old season archived, new one live),
+    // so a single event carries both sides instead of `ended` + `started`.
     env.events().publish(
-        (symbol_short!("season"), symbol_short!("started")),
-        (new_id, new_season.start_time, new_season.end_time),
+        (symbol_short!("season"), symbol_short!("rolled")),
+        (season.id, new_id, now, total_rewards, new_season.end_time),
     );
 
     Ok(new_id)

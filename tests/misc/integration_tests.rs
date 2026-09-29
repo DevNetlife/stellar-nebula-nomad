@@ -1,14 +1,14 @@
 #![cfg(test)]
 
 use soroban_sdk::testutils::{Address as _, Events, Ledger, LedgerInfo};
-use soroban_sdk::{symbol_short, vec, Address, Bytes, BytesN, Env, IntoVal, String, Vec};
-use stellar_nebula_nomad::{
-    Blueprint, BlueprintError, BlueprintRarity, CellType, NebulaCell, NebulaLayout,
-    NebulaNomadContract, NebulaNomadContractClient, ProfileError, ProgressUpdate, Rarity,
-    Referral, ReferralError, Session, SessionError, Ship, ShipError, GRID_SIZE, TOTAL_CELLS,
-};
+use soroban_sdk::{symbol_short, vec, Address, Bytes, BytesN, Env, String, Vec};
 use stellar_nebula_nomad::resource_minter::{
     ResourceError, ResourceMinter, ResourceMinterClient, ResourceType, LEDGERS_PER_DAY,
+};
+use stellar_nebula_nomad::{
+    Blueprint, BlueprintError, BlueprintRarity, CellType, NebulaCell, NebulaLayout,
+    NebulaNomadContract, NebulaNomadContractClient, ProfileError, ProgressUpdate, Rarity, Referral,
+    ReferralError, Session, SessionError, Ship, ShipError, GRID_SIZE, TOTAL_CELLS,
 };
 
 fn setup_env() -> (Env, NebulaNomadContractClient<'static>, Address) {
@@ -24,10 +24,34 @@ fn setup_env() -> (Env, NebulaNomadContractClient<'static>, Address) {
         min_persistent_entry_ttl: 1000,
         max_entry_ttl: 10_000,
     });
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let player = Address::generate(&env);
     (env, client, player)
+}
+
+/// Number of contract events emitted so far.
+fn event_count(env: &Env) -> usize {
+    env.events().all().events().len()
+}
+
+/// Symbol topics of the event at `index`, or `None` when it is missing.
+fn event_topics(env: &Env, index: usize) -> Option<Vec<std::string::String>> {
+    let events = env.events().all();
+    let event = events.events().get(index)?;
+    let soroban_sdk::xdr::ContractEventBody::V0(body) = &event.body;
+    body.topics
+        .iter()
+        .map(|topic| match topic {
+            soroban_sdk::xdr::ScVal::Symbol(s) => {
+                let bytes: &[u8] = s.as_ref();
+                std::str::from_utf8(bytes)
+                    .ok()
+                    .map(std::string::ToString::to_string)
+            }
+            _ => None,
+        })
+        .collect()
 }
 
 // ─── generate_nebula_layout ───────────────────────────────────────────────
@@ -75,7 +99,7 @@ fn test_different_seeds_produce_different_layouts() {
 fn test_layout_changes_with_ledger_state() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let player = Address::generate(&env);
     let seed = BytesN::from_array(&env, &[5u8; 32]);
@@ -260,15 +284,13 @@ fn test_scan_nebula_emits_event() {
     let seed = BytesN::from_array(&env, &[77u8; 32]);
     let _result = client.scan_nebula(&seed, &player);
 
-    let events = env.events().all();
     assert!(
-        !events.is_empty(),
+        event_count(&env) > 0,
         "Expected NebulaScanned event to be emitted"
     );
 
     // Verify the last event has the correct topics
-    let last = events.get(events.len() - 1).unwrap();
-    let (_contract_addr, topics, _data) = last;
+    let topics = event_topics(&env, event_count(&env) - 1).unwrap();
     assert_eq!(topics.len(), 2);
 }
 
@@ -498,10 +520,12 @@ fn test_transfer_ship_updates_ownership_tracking_and_emits_event() {
     assert_eq!(new_owner_ships.len(), 1);
     assert_eq!(new_owner_ships.get(0).unwrap(), ship.id);
 
-    let events = env.events().all();
-    let (_, topics, _) = events.get(events.len() - 2).unwrap();
-    assert_eq!(topics.get(0).unwrap(), symbol_short!("ship").into_val(&env));
-    assert_eq!(topics.get(1).unwrap(), symbol_short!("transfer").into_val(&env));
+    let topics = event_topics(&env, event_count(&env) - 2).unwrap();
+    assert_eq!(topics.get(0).map(std::string::String::as_str), Some("ship"));
+    assert_eq!(
+        topics.get(1).map(std::string::String::as_str),
+        Some("transfer")
+    );
 }
 
 #[test]
@@ -558,8 +582,7 @@ fn test_harvest_resources_single_invocation_and_events() {
     let harvest = client.harvest_resources(&ship.id, &layout);
     assert_eq!(harvest.ship_id, ship.id);
     assert!(harvest.total_harvested > 0);
-    let events = env.events().all();
-    assert!(!events.is_empty());
+    assert!(event_count(&env) > 0);
 }
 
 #[test]
@@ -591,7 +614,14 @@ fn setup_minter_env() -> (Env, Address, Address, Address) {
     let dummy = Address::generate(&env);
     let cid = env.register(ResourceMinter, ());
     let client = ResourceMinterClient::new(&env, &cid);
-    let _ = client.try_init(&admin, &dummy, &dummy, &500u32, &1_000i128, &LEDGERS_PER_DAY);
+    let _ = client.try_init(
+        &admin,
+        &dummy,
+        &dummy,
+        &500u32,
+        &1_000i128,
+        &LEDGERS_PER_DAY,
+    );
     (env, cid, admin, player)
 }
 
@@ -694,9 +724,8 @@ fn test_stake_deducts_liquid_balance() {
 fn test_stake_insufficient_resources_rejected() {
     let (env, cid, _, player) = setup_minter_env();
     let client = ResourceMinterClient::new(&env, &cid);
-    let err = client.try_stake_for_yield(
-        &player, &ResourceType::Stardust, &100i128, &LEDGERS_PER_DAY,
-    );
+    let err =
+        client.try_stake_for_yield(&player, &ResourceType::Stardust, &100i128, &LEDGERS_PER_DAY);
     assert_eq!(err, Err(Ok(ResourceError::InsufficientResources)));
 }
 
@@ -705,9 +734,7 @@ fn test_stake_below_min_duration_rejected() {
     let (env, cid, _, player) = setup_minter_env();
     let client = ResourceMinterClient::new(&env, &cid);
     client.harvest_resource(&player, &1u64, &0u32);
-    let err = client.try_stake_for_yield(
-        &player, &ResourceType::Stardust, &100i128, &1_000u32,
-    );
+    let err = client.try_stake_for_yield(&player, &ResourceType::Stardust, &100i128, &1_000u32);
     assert_eq!(err, Err(Ok(ResourceError::InvalidDuration)));
 }
 
@@ -715,9 +742,8 @@ fn test_stake_below_min_duration_rejected() {
 fn test_stake_zero_amount_rejected() {
     let (env, cid, _, player) = setup_minter_env();
     let client = ResourceMinterClient::new(&env, &cid);
-    let err = client.try_stake_for_yield(
-        &player, &ResourceType::Stardust, &0i128, &LEDGERS_PER_DAY,
-    );
+    let err =
+        client.try_stake_for_yield(&player, &ResourceType::Stardust, &0i128, &LEDGERS_PER_DAY);
     assert_eq!(err, Err(Ok(ResourceError::InvalidAmount)));
 }
 
@@ -728,9 +754,8 @@ fn test_duplicate_stake_rejected() {
     client.harvest_resource(&player, &1u64, &0u32);
     client.harvest_resource(&player, &2u64, &0u32);
     client.stake_for_yield(&player, &ResourceType::Stardust, &100i128, &LEDGERS_PER_DAY);
-    let err = client.try_stake_for_yield(
-        &player, &ResourceType::Stardust, &100i128, &LEDGERS_PER_DAY,
-    );
+    let err =
+        client.try_stake_for_yield(&player, &ResourceType::Stardust, &100i128, &LEDGERS_PER_DAY);
     assert_eq!(err, Err(Ok(ResourceError::AlreadyStaked)));
 }
 
@@ -743,7 +768,10 @@ fn test_claim_yield_after_24h() {
     advance_ledgers(&env, LEDGERS_PER_DAY);
     let yield_earned = client.claim_yield(&player);
     assert!(yield_earned >= 0);
-    assert_eq!(client.get_balance(&player, &ResourceType::Plasma), yield_earned);
+    assert_eq!(
+        client.get_balance(&player, &ResourceType::Plasma),
+        yield_earned
+    );
 }
 
 #[test]
@@ -775,7 +803,12 @@ fn test_yield_accumulates_across_partial_claims() {
     let (env, cid, _, player) = setup_minter_env();
     let client = ResourceMinterClient::new(&env, &cid);
     client.harvest_resource(&player, &1u64, &0u32);
-    client.stake_for_yield(&player, &ResourceType::Stardust, &100i128, &(LEDGERS_PER_DAY * 365 * 2));
+    client.stake_for_yield(
+        &player,
+        &ResourceType::Stardust,
+        &100i128,
+        &(LEDGERS_PER_DAY * 365 * 2),
+    );
     advance_ledgers(&env, LEDGERS_PER_DAY * 365);
     let first_claim = client.claim_yield(&player);
     advance_ledgers(&env, LEDGERS_PER_DAY * 365);
@@ -823,7 +856,8 @@ fn test_unstake_then_restake_succeeds() {
     client.stake_for_yield(&player, &ResourceType::Stardust, &100i128, &LEDGERS_PER_DAY);
     advance_ledgers(&env, LEDGERS_PER_DAY);
     client.unstake(&player);
-    let result = client.try_stake_for_yield(&player, &ResourceType::Stardust, &100i128, &LEDGERS_PER_DAY);
+    let result =
+        client.try_stake_for_yield(&player, &ResourceType::Stardust, &100i128, &LEDGERS_PER_DAY);
     assert!(result.is_ok());
 }
 
@@ -930,9 +964,21 @@ fn test_batch_update_progress_applies_all() {
     let id = client.initialize_profile(&player);
     let updates = soroban_sdk::vec![
         &env,
-        ProgressUpdate { profile_id: id, scan_count: 1, essence: 100 },
-        ProgressUpdate { profile_id: id, scan_count: 2, essence: 200 },
-        ProgressUpdate { profile_id: id, scan_count: 1, essence: 50  },
+        ProgressUpdate {
+            profile_id: id,
+            scan_count: 1,
+            essence: 100
+        },
+        ProgressUpdate {
+            profile_id: id,
+            scan_count: 2,
+            essence: 200
+        },
+        ProgressUpdate {
+            profile_id: id,
+            scan_count: 1,
+            essence: 50
+        },
     ];
     client.batch_update_progress(&player, &updates);
     let profile = client.get_profile(&id);
@@ -947,12 +993,36 @@ fn test_batch_update_exceeds_limit_panics() {
     let id = client.initialize_profile(&player);
     let updates = soroban_sdk::vec![
         &env,
-        ProgressUpdate { profile_id: id, scan_count: 1, essence: 10 },
-        ProgressUpdate { profile_id: id, scan_count: 1, essence: 10 },
-        ProgressUpdate { profile_id: id, scan_count: 1, essence: 10 },
-        ProgressUpdate { profile_id: id, scan_count: 1, essence: 10 },
-        ProgressUpdate { profile_id: id, scan_count: 1, essence: 10 },
-        ProgressUpdate { profile_id: id, scan_count: 1, essence: 10 },
+        ProgressUpdate {
+            profile_id: id,
+            scan_count: 1,
+            essence: 10
+        },
+        ProgressUpdate {
+            profile_id: id,
+            scan_count: 1,
+            essence: 10
+        },
+        ProgressUpdate {
+            profile_id: id,
+            scan_count: 1,
+            essence: 10
+        },
+        ProgressUpdate {
+            profile_id: id,
+            scan_count: 1,
+            essence: 10
+        },
+        ProgressUpdate {
+            profile_id: id,
+            scan_count: 1,
+            essence: 10
+        },
+        ProgressUpdate {
+            profile_id: id,
+            scan_count: 1,
+            essence: 10
+        },
     ];
     client.batch_update_progress(&player, &updates);
 }
@@ -961,8 +1031,7 @@ fn test_batch_update_exceeds_limit_panics() {
 fn test_profile_emits_nomad_joined_event() {
     let (env, client, player) = setup_env();
     client.initialize_profile(&player);
-    let events = env.events().all();
-    assert!(!events.is_empty());
+    assert!(event_count(&env) > 0);
 }
 
 // ─── Session manager tests ────────────────────────────────────────────────
@@ -1036,8 +1105,7 @@ fn test_expire_already_expired_session_panics() {
 fn test_session_emits_started_event() {
     let (env, client, player) = setup_env();
     client.start_session(&player, &1u64);
-    let events = env.events().all();
-    assert!(!events.is_empty());
+    assert!(event_count(&env) > 0);
 }
 
 // ─── Blueprint factory tests ──────────────────────────────────────────────
@@ -1233,8 +1301,7 @@ fn test_referral_emits_registered_event() {
     let (env, client, referrer) = setup_env();
     let new_nomad = Address::generate(&env);
     client.register_referral(&referrer, &new_nomad);
-    let events = env.events().all();
-    assert!(!events.is_empty());
+    assert!(event_count(&env) > 0);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1263,30 +1330,40 @@ fn test_economy_to_market_full_flow() {
     // Step 3: Harvest resources from the nebula (economy module)
     let harvest = client.harvest_resources(&ship.id, &layout);
     assert_eq!(harvest.ship_id, ship.id);
-    assert!(harvest.total_harvested > 0, "Harvest should yield resources");
+    assert!(
+        harvest.total_harvested > 0,
+        "Harvest should yield resources"
+    );
 
     // Step 4: Verify harvested resources were credited
     // The harvest result contains the list of harvested resources
-    assert!(harvest.resources.len() > 0, "Should have harvested at least one resource type");
+    assert!(
+        harvest.resources.len() > 0,
+        "Should have harvested at least one resource type"
+    );
 
     // Step 5: Harvest and list on DEX (market module)
     let resource_symbol = symbol_short!("dust");
     let min_price = 50i128;
-    let (harvest_result, dex_offer) = client.harvest_and_list(
-        &player, &ship.id, &layout, &resource_symbol, &min_price,
-    );
+    let (harvest_result, dex_offer) =
+        client.harvest_and_list(&player, &ship.id, &layout, &resource_symbol, &min_price);
 
     // Verify the DEX offer was created with correct parameters
     assert!(dex_offer.offer_id > 0, "DEX offer should have a valid ID");
     assert!(dex_offer.active, "DEX offer should be active");
-    assert!(dex_offer.min_price >= min_price, "Min price should meet or exceed requested minimum");
+    assert!(
+        dex_offer.min_price >= min_price,
+        "Min price should meet or exceed requested minimum"
+    );
 
     // Step 6: Verify the harvest produced resources
     assert!(harvest_result.total_harvested > 0);
 
     // Step 7: Events should have been emitted for both harvest and DEX listing
-    let events = env.events().all();
-    assert!(events.len() >= 2, "Should have harvest + DEX listing events");
+    assert!(
+        event_count(&env) >= 2,
+        "Should have harvest + DEX listing events"
+    );
 }
 
 #[test]
@@ -1307,13 +1384,20 @@ fn test_economy_to_market_multiple_harvests_accumulate() {
         total_harvested += harvest.total_harvested;
     }
 
-    assert!(total_harvested > 0, "Multiple harvests should accumulate resources");
+    assert!(
+        total_harvested > 0,
+        "Multiple harvests should accumulate resources"
+    );
 
     // Final harvest-and-list to verify the accumulated balance can be listed
     let final_seed = BytesN::from_array(&env, &[99u8; 32]);
     let final_layout = client.generate_nebula_layout(&final_seed, &player);
     let (_, offer) = client.harvest_and_list(
-        &player, &ship.id, &final_layout, &symbol_short!("dust"), &10i128,
+        &player,
+        &ship.id,
+        &final_layout,
+        &symbol_short!("dust"),
+        &10i128,
     );
     assert!(offer.active);
 }
@@ -1396,8 +1480,7 @@ fn test_ship_upgrade_improves_capabilities() {
     client.apply_upgrade(&player, &ship.id, &symbol_short!("hull"));
 
     // The ship's state should reflect the upgrade
-    let events = env.events().all();
-    assert!(!events.is_empty(), "Upgrade should emit events");
+    assert!(event_count(&env) > 0, "Upgrade should emit events");
 }
 
 #[test]
@@ -1420,7 +1503,10 @@ fn test_multi_stage_scan_consistency() {
     }
 
     assert_eq!(scan_count, 10, "Should have completed all 10 scans");
-    assert!(total_energy_sum > 0, "Total energy across scans should be positive");
+    assert!(
+        total_energy_sum > 0,
+        "Total energy across scans should be positive"
+    );
 }
 
 // ─── Flow 3: Social → Fiscal Governance (Alliance → Treasury → Voting) ─────
@@ -1446,7 +1532,11 @@ fn test_social_to_fiscal_governance_full_flow() {
     assert_eq!(alliance.name, alliance_name);
     assert_eq!(alliance.founder, founder);
     assert!(alliance.is_active);
-    assert_eq!(alliance.members.len(), 1, "Founder should be the sole initial member");
+    assert_eq!(
+        alliance.members.len(),
+        1,
+        "Founder should be the sole initial member"
+    );
 
     // Step 3: Additional members join the alliance
     let member1 = Address::generate(&env);
@@ -1462,14 +1552,20 @@ fn test_social_to_fiscal_governance_full_flow() {
 
     // Step 4: Members contribute to the alliance treasury (fiscal flow)
     let contribution1 = client.contribute_to_treasury(&member1, &500i128);
-    assert!(contribution1 > 0, "Treasury should reflect the contribution");
+    assert!(
+        contribution1 > 0,
+        "Treasury should reflect the contribution"
+    );
 
     let contribution2 = client.contribute_to_treasury(&member2, &300i128);
     assert!(contribution2 > 0);
 
     // Step 5: Verify treasury balance accumulated contributions
     let treasury = client.get_alliance_treasury(&alliance_id);
-    assert!(treasury >= 800, "Treasury should be at least 800 (500 + 300)");
+    assert!(
+        treasury >= 800,
+        "Treasury should be at least 800 (500 + 300)"
+    );
 
     // Step 6: Member contributions should be tracked individually
     let contrib_m1 = client.get_member_contribution(&alliance_id, &member1);
@@ -1498,9 +1594,11 @@ fn test_social_to_fiscal_governance_full_flow() {
     client.cast_vote(&member2, &proposal_id, &false, &vote_weight_against);
 
     // Step 9: Verify events were emitted throughout the flow
-    let events = env.events().all();
     // Should have: alliance founded + 2 joins + 2 contributions + 1 proposal + 3 votes
-    assert!(events.len() >= 9, "Should have emitted events for all governance actions");
+    assert!(
+        event_count(&env) >= 9,
+        "Should have emitted events for all governance actions"
+    );
 }
 
 #[test]
@@ -1540,8 +1638,14 @@ fn test_treasury_contribution_tracking() {
     client.contribute_to_treasury(&member, &150i128);
 
     let final_treasury = client.get_alliance_treasury(&alliance_id);
-    assert!(final_treasury >= initial_treasury + 450, "Treasury should reflect all contributions");
+    assert!(
+        final_treasury >= initial_treasury + 450,
+        "Treasury should reflect all contributions"
+    );
 
     let total_contrib = client.get_member_contribution(&alliance_id, &member);
-    assert!(total_contrib >= 450, "Member contribution should sum to 450");
+    assert!(
+        total_contrib >= 450,
+        "Member contribution should sum to 450"
+    );
 }

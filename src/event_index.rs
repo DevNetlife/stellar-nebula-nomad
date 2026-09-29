@@ -281,8 +281,8 @@ pub fn emit_rate_limit_hit(
 mod tests {
     use super::*;
     use soroban_sdk::{
-        testutils::{Address as _, Events},
-        Address, BytesN, Env, IntoVal, Val, Vec,
+        testutils::Address as _,
+        Address, BytesN, Env, Vec,
     };
 
     fn make_env() -> Env {
@@ -292,24 +292,16 @@ mod tests {
     // Helper: check that at least one event was published whose
     // topics start with (expected_topic0, expected_topic1).
     fn assert_event_published(env: &Env, topic0: Symbol, topic1: Symbol) {
-        let events = env.events().all();
-        let found = events.iter().any(|(_, topics, _)| {
-            if let (Ok(t0), Ok(t1)) = (
-                topics.get(0).map(|v| Symbol::try_from_val(env, &v)),
-                topics.get(1).map(|v| Symbol::try_from_val(env, &v)),
-            ) {
-                t0 == Ok(topic0.clone()) && t1 == Ok(topic1.clone())
-            } else {
-                false
-            }
-        });
+        let t0 = std::string::ToString::to_string(&topic0);
+        let t1 = std::string::ToString::to_string(&topic1);
+        let found = crate::test_helpers::has_event_topics(env, &[&t0, &t1]);
         assert!(
             found,
             "Expected event with topics ({:?}, {:?}) was not found",
-            topic0, topic1
+            topic0,
+            topic1
         );
     }
-
     #[test]
     fn test_nebula_scanned_event_has_indexed_topics() {
         let env  = make_env();

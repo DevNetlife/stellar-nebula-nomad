@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, contracterror, symbol_short, Address, Env, Symbol};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbol};
 
 /// Default essence bonus distributed to the referrer after the new nomad's first scan.
 /// Overridable at runtime via `set_reward_config`.
@@ -123,9 +123,10 @@ pub fn set_reward_config(
 ) -> Result<(), ReferralError> {
     admin.require_auth();
 
-    env.storage()
-        .instance()
-        .set(&ReferralKey::RewardConfig, &RewardConfig { reward_per_claim });
+    env.storage().instance().set(
+        &ReferralKey::RewardConfig,
+        &RewardConfig { reward_per_claim },
+    );
 
     env.events().publish(
         (symbol_short!("referral"), symbol_short!("cfg")),
@@ -415,11 +416,31 @@ const MAX_REFERRALS_PER_HOUR: u32 = 5;
 /// Initialize multi-tier reward tiers. Call once at contract startup.
 pub fn init_tiers(env: &Env) {
     let tiers = [
-        TierConfig { min_referrals: 0, multiplier_bps: 10_000, tier_level: 0 },   // Bronze: 1x
-        TierConfig { min_referrals: 5, multiplier_bps: 12_000, tier_level: 1 },    // Silver: 1.2x
-        TierConfig { min_referrals: 20, multiplier_bps: 15_000, tier_level: 2 },   // Gold: 1.5x
-        TierConfig { min_referrals: 50, multiplier_bps: 20_000, tier_level: 3 },   // Platinum: 2x
-        TierConfig { min_referrals: 100, multiplier_bps: 25_000, tier_level: 4 },  // Diamond: 2.5x
+        TierConfig {
+            min_referrals: 0,
+            multiplier_bps: 10_000,
+            tier_level: 0,
+        }, // Bronze: 1x
+        TierConfig {
+            min_referrals: 5,
+            multiplier_bps: 12_000,
+            tier_level: 1,
+        }, // Silver: 1.2x
+        TierConfig {
+            min_referrals: 20,
+            multiplier_bps: 15_000,
+            tier_level: 2,
+        }, // Gold: 1.5x
+        TierConfig {
+            min_referrals: 50,
+            multiplier_bps: 20_000,
+            tier_level: 3,
+        }, // Platinum: 2x
+        TierConfig {
+            min_referrals: 100,
+            multiplier_bps: 25_000,
+            tier_level: 4,
+        }, // Diamond: 2.5x
     ];
 
     for tier in tiers.iter() {
@@ -496,9 +517,8 @@ pub fn register_referral_v2(
 
     // Update analytics.
     let analytics_key = ReferralV2Key::ReferrerAnalytics(referrer.clone());
-    let mut analytics: ReferrerAnalytics = persistent
-        .get(&analytics_key)
-        .unwrap_or(ReferrerAnalytics {
+    let mut analytics: ReferrerAnalytics =
+        persistent.get(&analytics_key).unwrap_or(ReferrerAnalytics {
             total_referrals: 0,
             successful_referrals: 0,
             total_essence_earned: 0,
@@ -513,9 +533,7 @@ pub fn register_referral_v2(
 
     // Update global count.
     let instance = env.storage().instance();
-    let total: u64 = instance
-        .get(&ReferralV2Key::TotalReferrals)
-        .unwrap_or(0);
+    let total: u64 = instance.get(&ReferralV2Key::TotalReferrals).unwrap_or(0);
     instance.set(&ReferralV2Key::TotalReferrals, &(total + 1));
 
     Ok(id)
@@ -559,7 +577,10 @@ pub fn claim_referral_reward_v2(
     let total: i128 = instance
         .get(&ReferralV2Key::TotalRewardsDistributed)
         .unwrap_or(0);
-    instance.set(&ReferralV2Key::TotalRewardsDistributed, &(total + base_reward + bonus));
+    instance.set(
+        &ReferralV2Key::TotalRewardsDistributed,
+        &(total + base_reward + bonus),
+    );
 
     Ok(base_reward + bonus)
 }
@@ -592,7 +613,7 @@ pub fn get_global_stats(env: &Env) -> (u64, i128) {
 fn check_fraud(
     env: &Env,
     referrer: &Address,
-    new_nomad: &Address,
+    _new_nomad: &Address,
     fingerprint: Option<u64>,
 ) -> Result<(), ReferralError> {
     // Check if referrer is blocked.

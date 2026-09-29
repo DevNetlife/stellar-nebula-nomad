@@ -140,9 +140,10 @@ pub fn cache_with_ttl(
         is_valid: true,
     };
 
-    env.storage()
-        .persistent()
-        .set(&CacheKey::CacheEntry(namespace.clone(), key.clone()), &cached);
+    env.storage().persistent().set(
+        &CacheKey::CacheEntry(namespace.clone(), key.clone()),
+        &cached,
+    );
 
     env.storage()
         .instance()
@@ -179,15 +180,11 @@ pub fn get_cached_with_ttl(
                 .unwrap_or(false);
 
             if invalidated || !entry.is_valid || age > entry.ttl_seconds {
-                // Mark as stale and emit event.
+                // Mark as stale. The `Err` return below is the observable
+                // signal for expiry, so no event is emitted on a read path.
                 env.storage()
                     .instance()
                     .set(&CacheKey::IsStale(namespace.clone(), key.clone()), &true);
-
-                env.events().publish(
-                    (symbol_short!("cache"), symbol_short!("expired")),
-                    (namespace, key, current_time),
-                );
 
                 Err(CacheTtlError::CacheExpired)
             } else {
@@ -244,12 +241,7 @@ pub fn get_remaining_ttl(env: &Env, namespace: Symbol, key: Symbol) -> Result<u6
 // ─── Cache Invalidation ──────────────────────────────────────────────────
 
 /// Invalidate a specific cache entry.
-pub fn invalidate_cache_entry(
-    env: &Env,
-    namespace: Symbol,
-    key: Symbol,
-    reason: Symbol,
-) {
+pub fn invalidate_cache_entry(env: &Env, namespace: Symbol, key: Symbol, reason: Symbol) {
     env.storage()
         .instance()
         .set(&CacheKey::IsStale(namespace.clone(), key.clone()), &true);
@@ -261,14 +253,11 @@ pub fn invalidate_cache_entry(
 }
 
 /// Invalidate all cache entries in a namespace.
-pub fn invalidate_namespace(
-    env: &Env,
-    namespace: Symbol,
-    reason: Symbol,
-) {
-    env.storage()
-        .instance()
-        .set(&CacheKey::LastInvalidation(namespace.clone()), &env.ledger().timestamp());
+pub fn invalidate_namespace(env: &Env, namespace: Symbol, reason: Symbol) {
+    env.storage().instance().set(
+        &CacheKey::LastInvalidation(namespace.clone()),
+        &env.ledger().timestamp(),
+    );
 
     env.events().publish(
         (symbol_short!("cache"), symbol_short!("ns_clr")),
@@ -278,7 +267,7 @@ pub fn invalidate_namespace(
 
 /// Automatic cleanup of expired entries (called periodically).
 pub fn clear_stale_entries(env: &Env, namespace: Symbol) -> u32 {
-    let mut cleared = 0u32;
+    let cleared = 0u32;
 
     // In a real implementation, iterate through all entries in the namespace
     // and remove those where age > ttl_seconds. For this example, we track
@@ -321,7 +310,12 @@ pub fn configure_ttl(
 
     env.events().publish(
         (symbol_short!("cache"), symbol_short!("cfg")),
-        (namespace, ttl_seconds, auto_refresh, env.ledger().timestamp()),
+        (
+            namespace,
+            ttl_seconds,
+            auto_refresh,
+            env.ledger().timestamp(),
+        ),
     );
 
     Ok(())
@@ -351,7 +345,7 @@ pub fn detect_stale_data(env: &Env, namespace: Symbol, key: Symbol) -> bool {
 }
 
 /// Get cache statistics (for monitoring).
-pub fn get_cache_stats(env: &Env, namespace: Symbol) -> (u32, u32) {
+pub fn get_cache_stats(_env: &Env, namespace: Symbol) -> (u32, u32) {
     // Returns (total_entries, stale_entries).
     // In a real implementation, this would iterate and count.
     // For now, return placeholder values.

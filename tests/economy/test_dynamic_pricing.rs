@@ -4,8 +4,8 @@ use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, Address, Bytes, BytesN, Env, Symbol, Vec};
 use stellar_nebula_nomad::{
     CellType, DynamicListError, NebulaLayout, NebulaNomadContract, NebulaNomadContractClient,
-    PriceState, PricingConfig, PricingError, DEFAULT_MAX_DEVIATION_BPS,
-    DEFAULT_MIN_COOLDOWN_SECS, DEFAULT_SMOOTHING_BPS, MAX_HISTORY_ENTRIES,
+    PriceState, PricingConfig, PricingError, DEFAULT_MAX_DEVIATION_BPS, DEFAULT_MIN_COOLDOWN_SECS,
+    DEFAULT_SMOOTHING_BPS, MAX_HISTORY_ENTRIES,
 };
 
 const DUST: Symbol = symbol_short!("dust");
@@ -64,11 +64,7 @@ fn seed_price(
 }
 
 /// Seed a price for all three harvest assets, so any layout is covered.
-fn seed_all_prices(
-    client: &NebulaNomadContractClient,
-    admin: &Address,
-    price: i128,
-) {
+fn seed_all_prices(client: &NebulaNomadContractClient, admin: &Address, price: i128) {
     for asset in HARVEST_ASSETS {
         seed_price(client, admin, asset, price);
     }
@@ -111,7 +107,10 @@ fn test_pricing_config_round_trips() {
 fn test_default_config_is_readable_before_initialization() {
     let (_env, client, _admin) = setup();
     // Reads must not require a config: the defaults apply immediately.
-    assert_eq!(client.get_pricing_config(), PricingConfig::default_issue_452());
+    assert_eq!(
+        client.get_pricing_config(),
+        PricingConfig::default_issue_452()
+    );
 }
 
 #[test]
@@ -127,7 +126,9 @@ fn test_init_pricing_config_rejects_double_init() {
 #[test]
 fn test_pricing_requires_initialization() {
     let (_env, client, admin) = setup();
-    let err = client.try_observe_price(&admin, &DUST, &100i128).unwrap_err();
+    let err = client
+        .try_observe_price(&admin, &DUST, &100i128)
+        .unwrap_err();
     assert_eq!(err, Ok(PricingError::NotInitialized));
 }
 
@@ -147,7 +148,9 @@ fn test_observe_price_rejects_non_admin_source() {
     let (_env, client, admin) = setup();
     let impostor = Address::generate(&_env);
     init_pricing(&client, &admin);
-    let err = client.try_observe_price(&impostor, &DUST, &100i128).unwrap_err();
+    let err = client
+        .try_observe_price(&impostor, &DUST, &100i128)
+        .unwrap_err();
     assert_eq!(err, Ok(PricingError::Unauthorized));
 }
 
@@ -198,7 +201,10 @@ fn test_the_published_price_lags_the_raw_feed() {
     // taken per observation.
     assert_eq!(price.sma, 106);
     assert_eq!(price.published, 106);
-    assert!(price.published < 130, "published price must lag the raw feed");
+    assert!(
+        price.published < 130,
+        "published price must lag the raw feed"
+    );
 }
 
 #[test]
@@ -275,7 +281,9 @@ fn test_the_cooldown_throttles_print_frequency() {
     seed_price(&client, &admin, DUST, 100);
 
     // Immediately after the seed print, the cooldown has not elapsed.
-    let err = client.try_observe_price(&admin, &DUST, &110i128).unwrap_err();
+    let err = client
+        .try_observe_price(&admin, &DUST, &110i128)
+        .unwrap_err();
     assert_eq!(err, Ok(PricingError::CooldownActive));
 
     tick(&env, DEFAULT_MIN_COOLDOWN_SECS);
@@ -504,7 +512,10 @@ fn test_list_at_market_tracks_the_smoothed_price_not_the_raw_feed() {
     let (_, offer, price) = client.list_at_market(&player, &ship_id, &layout, &asset);
     assert_eq!(price, 110, "100 + 20% of the 50 gap");
     assert_eq!(offer.min_price, 110);
-    assert!(offer.min_price < 150, "the listing must not chase the raw spike");
+    assert!(
+        offer.min_price < 150,
+        "the listing must not chase the raw spike"
+    );
 }
 
 #[test]

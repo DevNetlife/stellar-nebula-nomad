@@ -222,12 +222,7 @@ fn burn_overcharge_surcharge(
     if balance < base_amount.saturating_add(extra) {
         return Err(CraftingError::InsufficientResources);
     }
-    set_resource_balance(
-        env,
-        player,
-        symbol.clone(),
-        balance.saturating_sub(extra),
-    );
+    set_resource_balance(env, player, symbol.clone(), balance.saturating_sub(extra));
     env.events()
         .publish((symbol_short!("overchrg"), player.clone()), extra);
     Ok(extra)
@@ -762,8 +757,14 @@ mod tests {
         env.as_contract(&id, || {
             craft(env.clone(), player.clone(), 1).unwrap();
             // 5 iron destroyed, 1 steel minted.
-            assert_eq!(get_resource_balance(&env, &player, Symbol::new(&env, "iron")), 5);
-            assert_eq!(get_resource_balance(&env, &player, Symbol::new(&env, "steel")), 1);
+            assert_eq!(
+                get_resource_balance(&env, &player, Symbol::new(&env, "iron")),
+                5
+            );
+            assert_eq!(
+                get_resource_balance(&env, &player, Symbol::new(&env, "steel")),
+                1
+            );
             assert_eq!(get_total_craft_sink(&env), 5);
         });
     }
@@ -779,7 +780,10 @@ mod tests {
             });
         }
         env.as_contract(&id, || {
-            assert_eq!(get_resource_balance(&env, &player, Symbol::new(&env, "iron")), 0);
+            assert_eq!(
+                get_resource_balance(&env, &player, Symbol::new(&env, "iron")),
+                0
+            );
         });
     }
 
@@ -789,8 +793,14 @@ mod tests {
         let (env, id, player, _iron, _steel) = setup_sink_scenario(10);
         env.as_contract(&id, || {
             craft_with_overcharge(env.clone(), player.clone(), 1).unwrap();
-            assert_eq!(get_resource_balance(&env, &player, Symbol::new(&env, "iron")), 0);
-            assert_eq!(get_resource_balance(&env, &player, Symbol::new(&env, "steel")), 1);
+            assert_eq!(
+                get_resource_balance(&env, &player, Symbol::new(&env, "iron")),
+                0
+            );
+            assert_eq!(
+                get_resource_balance(&env, &player, Symbol::new(&env, "steel")),
+                1
+            );
             // Both the recipe inputs and the surcharge are permanent sinks.
             assert_eq!(get_total_craft_sink(&env), 10);
         });
@@ -807,7 +817,10 @@ mod tests {
             );
             // Rejected before any mutation: the balance is untouched and the
             // player never receives the guaranteed discovery roll.
-            assert_eq!(get_resource_balance(&env, &player, Symbol::new(&env, "iron")), 5);
+            assert_eq!(
+                get_resource_balance(&env, &player, Symbol::new(&env, "iron")),
+                5
+            );
             assert_eq!(get_total_craft_sink(&env), 0);
             assert!(!is_unlocked(&env, &player, 999));
         });
@@ -833,7 +846,10 @@ mod tests {
                 Err(CraftingError::RecipeNotFound)
             );
             assert_eq!(get_total_craft_sink(&env), 0);
-            assert_eq!(get_resource_balance(&env, &player, Symbol::new(&env, "iron")), 10);
+            assert_eq!(
+                get_resource_balance(&env, &player, Symbol::new(&env, "iron")),
+                10
+            );
         });
     }
 

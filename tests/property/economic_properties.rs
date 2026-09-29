@@ -4,9 +4,7 @@ use proptest::prelude::*;
 use proptest::test_runner::{Config as ProptestConfig, TestRunner};
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, Address, Env};
-use stellar_nebula_nomad::trading::{
-    add_liquidity, create_pool, quote_swap,
-};
+use stellar_nebula_nomad::trading::{add_liquidity, create_pool, quote_swap};
 
 fn make_env() -> Env {
     let env = Env::default();

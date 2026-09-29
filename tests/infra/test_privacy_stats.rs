@@ -2,9 +2,9 @@
 
 use soroban_sdk::{symbol_short, testutils::Address as _, Address, BytesN, Env, Symbol, Vec};
 use stellar_nebula_nomad::{
-    batch_commit_stats, commit_private_stat, get_commitment, get_commitment_count, is_opted_in_privacy,
-    opt_in_privacy, reset_privacy_burst_counter, verify_private_stat, PrivacyError,
-    MAX_COMMITMENTS_PER_TX,
+    batch_commit_stats, commit_private_stat, get_commitment, get_commitment_count,
+    is_opted_in_privacy, opt_in_privacy, reset_privacy_burst_counter, verify_private_stat,
+    PrivacyError, MAX_COMMITMENTS_PER_TX,
 };
 
 fn setup_test_env() -> (Env, Address) {
@@ -99,7 +99,8 @@ fn test_verify_private_stat_valid_proof() {
     let stat_type = symbol_short!("kills");
     let value = 42i128;
 
-    let commitment_hash = commit_private_stat(env.clone(), player.clone(), stat_type, value).unwrap();
+    let commitment_hash =
+        commit_private_stat(env.clone(), player.clone(), stat_type, value).unwrap();
 
     // Create a valid proof (first 32 bytes match commitment, rest can be anything)
     let mut proof_bytes = [0u8; 64];
@@ -127,7 +128,8 @@ fn test_verify_private_stat_invalid_proof() {
     let stat_type = symbol_short!("deaths");
     let value = 5i128;
 
-    let commitment_hash = commit_private_stat(env.clone(), player.clone(), stat_type, value).unwrap();
+    let commitment_hash =
+        commit_private_stat(env.clone(), player.clone(), stat_type, value).unwrap();
 
     // Create an invalid proof (doesn't match commitment)
     let invalid_proof = BytesN::from_array(&env, &[0u8; 64]);
@@ -262,8 +264,10 @@ fn test_multiple_players_independent_commitments() {
     let stat_type = symbol_short!("score");
 
     // Both commit same stat type with different values
-    let hash1 = commit_private_stat(env.clone(), player1.clone(), stat_type.clone(), 1000i128).unwrap();
-    let hash2 = commit_private_stat(env.clone(), player2.clone(), stat_type.clone(), 2000i128).unwrap();
+    let hash1 =
+        commit_private_stat(env.clone(), player1.clone(), stat_type.clone(), 1000i128).unwrap();
+    let hash2 =
+        commit_private_stat(env.clone(), player2.clone(), stat_type.clone(), 2000i128).unwrap();
 
     // Hashes should be different (different players/timestamps)
     assert_ne!(hash1, hash2);

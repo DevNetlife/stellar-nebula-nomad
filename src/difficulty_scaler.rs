@@ -1,6 +1,6 @@
 //! Dynamic gameplay difficulty scaling.
 //!
-use soroban_sdk::{contracterror, contracttype, symbol_short, Env};
+use soroban_sdk::{contracterror, contracttype, Env};
 
 /// Maximum player level.
 pub const MAX_LEVEL: u32 = 100;
@@ -70,7 +70,7 @@ pub struct DifficultyResult {
 /// # Errors
 /// Returns `DifficultyError::InvalidLevel` if level is 0 or > 100.
 pub fn calculate_difficulty(
-    env: &Env,
+    _env: &Env,
     player_level: u32,
 ) -> Result<DifficultyResult, DifficultyError> {
     if player_level == 0 || player_level > MAX_LEVEL {
@@ -103,11 +103,8 @@ pub fn calculate_difficulty(
         legendary,
     };
 
-    // Emit DifficultyAdjusted event
-    env.events().publish(
-        (symbol_short!("diff"), symbol_short!("adjust")),
-        (player_level, anomaly_count, difficulty_multiplier),
-    );
+    // Difficulty is a pure calculation: no state changes, so no event is
+    // emitted here. Callers that persist a difficulty tier emit their own.
 
     Ok(DifficultyResult {
         anomaly_count,

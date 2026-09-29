@@ -2,7 +2,9 @@
 
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, Address, Env};
-use stellar_nebula_nomad::{GiftError, NebulaNomadContract, NebulaNomadContractClient, ResourceKey};
+use stellar_nebula_nomad::{
+    GiftError, NebulaNomadContract, NebulaNomadContractClient, ResourceKey,
+};
 
 fn setup_env() -> (Env, NebulaNomadContractClient<'static>) {
     let env = Env::default();
@@ -40,7 +42,13 @@ fn setup_env_with_high_ttl() -> (Env, NebulaNomadContractClient<'static>) {
     (env, client)
 }
 
-fn seed_balance(env: &Env, contract_id: &Address, owner: &Address, resource: &soroban_sdk::Symbol, amount: u32) {
+fn seed_balance(
+    env: &Env,
+    contract_id: &Address,
+    owner: &Address,
+    resource: &soroban_sdk::Symbol,
+    amount: u32,
+) {
     let key = ResourceKey::ResourceBalance(owner.clone(), resource.clone());
     env.as_contract(contract_id, || {
         env.storage().instance().set(&key, &amount);

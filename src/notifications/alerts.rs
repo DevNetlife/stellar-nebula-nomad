@@ -1,5 +1,5 @@
-use soroban_sdk::{symbol_short, Address, Env};
 use crate::notifications::push_service::emit_notification;
+use soroban_sdk::{symbol_short, Address, Env};
 
 pub fn check_low_resources(env: &Env, player: Address, balance: u32, threshold: u32) {
     if balance < threshold {

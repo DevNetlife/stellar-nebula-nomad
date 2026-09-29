@@ -1,6 +1,10 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::{Address as _, Events, Ledger}, Address, BytesN, Env, IntoVal, String, Symbol, symbol_short, Vec};
+use soroban_sdk::{
+    symbol_short,
+    testutils::{Address as _, Events, Ledger},
+    Address, BytesN, Env, IntoVal, String, Symbol, Vec,
+};
 use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient};
 
 #[test]
@@ -11,12 +15,12 @@ fn test_yield_farming_flow() {
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let user = Address::generate(&env);
-    
+
     // Deposit
     let amount = 1000;
     let lock_period = 30 * 86400; // 30 days
     let pool_id = client.deposit_to_pool(&user, &amount, &lock_period);
-    
+
     assert_eq!(pool_id, 0);
 
     // Harvest (immediately, should be 0 or small)
@@ -25,7 +29,7 @@ fn test_yield_farming_flow() {
 
     // Simulate time passing: 1 year
     env.ledger().set_timestamp(31_536_000);
-    
+
     let reward_after_year = client.harvest_farm_rewards(&user, &pool_id);
     // Base APY is 15%. 1000 * 0.15 = 150.
     assert_eq!(reward_after_year, 150);
@@ -60,7 +64,7 @@ fn test_theme_customizer() {
 
     let owner = Address::generate(&env);
     let theme_id = symbol_short!("nebula1");
-    
+
     client.apply_theme(&owner, &1, &theme_id);
 
     // Preview
@@ -77,9 +81,9 @@ fn test_indexer_callbacks() {
 
     let admin = Address::generate(&env);
     let cb_id = symbol_short!("stat_bot");
-    
+
     client.register_indexer_callback(&admin, &cb_id);
-    
+
     let payload = BytesN::from_array(&env, &[1u8; 256]);
     client.trigger_indexer_event(&symbol_short!("alert"), &payload);
 }
@@ -207,7 +211,7 @@ fn test_batch_sizes() {
 #[test]
 fn test_audit_and_sustainability_and_anomaly_and_shared_lib() {
     let env = Env::default();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let player = Address::generate(&env);

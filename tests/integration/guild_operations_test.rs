@@ -36,15 +36,24 @@ fn test_guild_operations_workflow_e2e() {
     // Step 1: Founder creates new alliance
     let alliance_name = String::from_str(&env, "Cosmic Voyagers");
     let alliance_id = found_alliance(&env, founder.clone(), alliance_name).unwrap();
-    assert_eq!(get_player_alliance(&env, founder.clone()), Some(alliance_id));
+    assert_eq!(
+        get_player_alliance(&env, founder.clone()),
+        Some(alliance_id)
+    );
 
     // Step 2: Member 1 joins alliance
     join_alliance(&env, alliance_id, member1.clone()).unwrap();
-    assert_eq!(get_player_alliance(&env, member1.clone()), Some(alliance_id));
+    assert_eq!(
+        get_player_alliance(&env, member1.clone()),
+        Some(alliance_id)
+    );
 
     // Step 3: Member 2 joins alliance
     join_alliance(&env, alliance_id, member2.clone()).unwrap();
-    assert_eq!(get_player_alliance(&env, member2.clone()), Some(alliance_id));
+    assert_eq!(
+        get_player_alliance(&env, member2.clone()),
+        Some(alliance_id)
+    );
 
     // Step 4: Verify alliance roster
     let alliance = get_alliance(&env, alliance_id).unwrap();
@@ -53,7 +62,10 @@ fn test_guild_operations_workflow_e2e() {
     // Step 5: Member 1 contributes to guild treasury
     contribute_to_treasury(&env, member1.clone(), 1_000).unwrap();
     assert_eq!(get_alliance_treasury(&env, alliance_id), 1_000);
-    assert_eq!(get_member_contribution(&env, alliance_id, member1.clone()), 1_000);
+    assert_eq!(
+        get_member_contribution(&env, alliance_id, member1.clone()),
+        1_000
+    );
 
     // Step 6: Create cooperative guild quest
     let quest_id = create_guild_quest(

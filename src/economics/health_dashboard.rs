@@ -152,14 +152,12 @@ pub fn initialize_dashboard(env: &Env, admin: &Address) {
         env,
         admin,
         symbol_short!("supply"),
-        0,    // No upper bound
+        0,             // No upper bound
         1_000_000_000, // Lower: 1B minimum supply
     );
 
-    env.events().publish(
-        (symbol_short!("dash"), symbol_short!("init")),
-        (),
-    );
+    env.events()
+        .publish((symbol_short!("dash"), symbol_short!("init")), ());
 }
 
 /// Update supply and demand metrics and check thresholds.
@@ -188,11 +186,7 @@ pub fn update_supply_demand(
         .set(&DashboardKey::SupplyDemand, &metrics);
 
     // Check supply thresholds
-    check_alert_threshold(
-        env,
-        symbol_short!("supply"),
-        total_supply,
-    );
+    check_alert_threshold(env, symbol_short!("supply"), total_supply);
 
     env.events().publish(
         (symbol_short!("dash"), symbol_short!("supply")),
@@ -201,11 +195,7 @@ pub fn update_supply_demand(
 }
 
 /// Update inflation/deflation metrics and check thresholds.
-pub fn update_inflation_metrics(
-    env: &Env,
-    minted_amount: i128,
-    burned_amount: i128,
-) {
+pub fn update_inflation_metrics(env: &Env, minted_amount: i128, burned_amount: i128) {
     let mut inflation: InflationMetrics = env
         .storage()
         .persistent()
@@ -228,11 +218,7 @@ pub fn update_inflation_metrics(
         .set(&DashboardKey::InflationMetrics, &inflation);
 
     // Check inflation thresholds
-    check_alert_threshold(
-        env,
-        symbol_short!("inflation"),
-        minted_amount,
-    );
+    check_alert_threshold(env, symbol_short!("inflation"), minted_amount);
 
     check_alert_threshold(
         env,
@@ -264,9 +250,10 @@ pub fn set_alert_threshold(
         metric_type: alert_name.clone(),
     };
 
-    env.storage()
-        .persistent()
-        .set(&DashboardKey::AlertThreshold(alert_name.clone()), &threshold);
+    env.storage().persistent().set(
+        &DashboardKey::AlertThreshold(alert_name.clone()),
+        &threshold,
+    );
 
     env.events().publish(
         (symbol_short!("dash"), symbol_short!("threshold")),
@@ -292,9 +279,10 @@ pub fn deactivate_alert(env: &Env, admin: &Address, alert_name: Symbol) {
 
     threshold.is_active = false;
 
-    env.storage()
-        .persistent()
-        .set(&DashboardKey::AlertThreshold(alert_name.clone()), &threshold);
+    env.storage().persistent().set(
+        &DashboardKey::AlertThreshold(alert_name.clone()),
+        &threshold,
+    );
 
     env.events().publish(
         (symbol_short!("dash"), symbol_short!("deactiv8")),

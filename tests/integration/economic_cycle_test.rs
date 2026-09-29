@@ -2,11 +2,9 @@
 
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, vec, Address, Bytes, BytesN, Env};
-use stellar_nebula_nomad::{
-    NebulaNomadContract, NebulaNomadContractClient, TOTAL_CELLS,
-};
 use stellar_nebula_nomad::resource_minter::{balance_of, credit_balance, ResourceType};
 use stellar_nebula_nomad::trading::{add_liquidity, create_pool, quote_swap, swap_exact_input};
+use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient, TOTAL_CELLS};
 
 fn setup_env() -> (Env, NebulaNomadContractClient<'static>, Address, Address) {
     let env = Env::default();
@@ -47,7 +45,10 @@ fn test_economic_cycle_workflow_e2e() {
     // Step 4: Harvest StellarDust & DarkMatter
     let _ = credit_balance(&env, &player, &ResourceType::StellarDust, 10_000);
     let _ = credit_balance(&env, &player, &ResourceType::DarkMatter, 5_000);
-    assert_eq!(balance_of(&env, &player, &ResourceType::StellarDust), 10_000);
+    assert_eq!(
+        balance_of(&env, &player, &ResourceType::StellarDust),
+        10_000
+    );
 
     // Step 5: Liquidity provider creates DEX pool
     let pool_id = create_pool(

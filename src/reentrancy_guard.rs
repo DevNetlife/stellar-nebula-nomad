@@ -199,7 +199,10 @@ mod tests {
         let id = env.register(GuardTestContract, ());
         let client = GuardTestContractClient::new(&env, &id);
         // The re-entrant attempt surfaces as a contract error.
-        assert_eq!(client.try_reenter(), Err(Ok(ReentrancyError::ReentrantCall)));
+        assert_eq!(
+            client.try_reenter(),
+            Err(Ok(ReentrancyError::ReentrantCall))
+        );
     }
 
     #[test]
