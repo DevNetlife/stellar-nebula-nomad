@@ -90,17 +90,24 @@ pub fn generate_theme_preview(env: Env, theme_id: Symbol) -> Result<ThemePreview
     }
 }
 
-pub fn apply_theme(env: Env, owner: Address, ship_id: u64, theme_id: Symbol) -> Result<(), ThemeError> {
+pub fn apply_theme(
+    env: Env,
+    owner: Address,
+    ship_id: u64,
+    theme_id: Symbol,
+) -> Result<(), ThemeError> {
     owner.require_auth();
 
     // In a real scenario, we'd check if the owner owns the ship using ship_nft module.
     // For this prototype, we'll assume the caller must be authorized and ship exists.
-    
+
     // Validate theme first
     let _ = generate_theme_preview(env.clone(), theme_id.clone())?;
 
     // Store ship-to-theme association
-    env.storage().persistent().set(&(symbol_short!("theme"), ship_id), &theme_id);
+    env.storage()
+        .persistent()
+        .set(&(symbol_short!("theme"), ship_id), &theme_id);
 
     env.events().publish(
         (symbol_short!("theme"), symbol_short!("applied")),
@@ -111,7 +118,9 @@ pub fn apply_theme(env: Env, owner: Address, ship_id: u64, theme_id: Symbol) -> 
 }
 
 pub fn get_theme(env: Env, ship_id: u64) -> Option<Symbol> {
-    env.storage().persistent().get(&(symbol_short!("theme"), ship_id))
+    env.storage()
+        .persistent()
+        .get(&(symbol_short!("theme"), ship_id))
 }
 
 #[cfg(test)]

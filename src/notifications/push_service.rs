@@ -16,8 +16,6 @@ pub fn emit_notification(env: &Env, player: Address, message: Symbol) {
     };
 
     // Emit event as requested
-    env.events().publish(
-        (symbol_short!("notify"), player),
-        message,
-    );
+    env.events()
+        .publish((symbol_short!("notify"), player), message);
 }

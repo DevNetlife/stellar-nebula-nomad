@@ -162,7 +162,10 @@ fn horizon_stream_events_emits_stream_event() {
     stream_events(&env, &sub, filter);
 
     let topics = event_topics(&env, 0).unwrap();
-    assert_eq!(topics.get(1).map(std::string::String::as_str), Some("stream"));
+    assert_eq!(
+        topics.get(1).map(std::string::String::as_str),
+        Some("stream")
+    );
 }
 
 #[test]
@@ -184,7 +187,10 @@ fn horizon_unsubscribe_emits_unsub_event() {
     unsubscribe_stream(&env, &sub);
 
     let topics = event_topics(&env, 0).unwrap();
-    assert_eq!(topics.get(1).map(std::string::String::as_str), Some("unsub"));
+    assert_eq!(
+        topics.get(1).map(std::string::String::as_str),
+        Some("unsub")
+    );
 }
 
 #[test]

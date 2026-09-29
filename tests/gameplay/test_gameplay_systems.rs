@@ -1,8 +1,6 @@
 #![cfg(test)]
 
-use soroban_sdk::{
-    symbol_short, testutils::Address as _, Address, Bytes, BytesN, Env, Vec,
-};
+use soroban_sdk::{symbol_short, testutils::Address as _, Address, Bytes, BytesN, Env, Vec};
 use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient};
 
 fn setup() -> (Env, NebulaNomadContractClient<'static>, Address) {

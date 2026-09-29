@@ -99,7 +99,9 @@ fn load_registry(env: &Env) -> Vec<u64> {
 }
 
 fn store_registry(env: &Env, registry: &Vec<u64>) {
-    env.storage().persistent().set(&ExportKey::Registry, registry);
+    env.storage()
+        .persistent()
+        .set(&ExportKey::Registry, registry);
 }
 
 fn load_session(env: &Env) -> ExportSession {

@@ -140,9 +140,10 @@ pub fn cache_with_ttl(
         is_valid: true,
     };
 
-    env.storage()
-        .persistent()
-        .set(&CacheKey::CacheEntry(namespace.clone(), key.clone()), &cached);
+    env.storage().persistent().set(
+        &CacheKey::CacheEntry(namespace.clone(), key.clone()),
+        &cached,
+    );
 
     env.storage()
         .instance()
@@ -240,12 +241,7 @@ pub fn get_remaining_ttl(env: &Env, namespace: Symbol, key: Symbol) -> Result<u6
 // ─── Cache Invalidation ──────────────────────────────────────────────────
 
 /// Invalidate a specific cache entry.
-pub fn invalidate_cache_entry(
-    env: &Env,
-    namespace: Symbol,
-    key: Symbol,
-    reason: Symbol,
-) {
+pub fn invalidate_cache_entry(env: &Env, namespace: Symbol, key: Symbol, reason: Symbol) {
     env.storage()
         .instance()
         .set(&CacheKey::IsStale(namespace.clone(), key.clone()), &true);
@@ -257,14 +253,11 @@ pub fn invalidate_cache_entry(
 }
 
 /// Invalidate all cache entries in a namespace.
-pub fn invalidate_namespace(
-    env: &Env,
-    namespace: Symbol,
-    reason: Symbol,
-) {
-    env.storage()
-        .instance()
-        .set(&CacheKey::LastInvalidation(namespace.clone()), &env.ledger().timestamp());
+pub fn invalidate_namespace(env: &Env, namespace: Symbol, reason: Symbol) {
+    env.storage().instance().set(
+        &CacheKey::LastInvalidation(namespace.clone()),
+        &env.ledger().timestamp(),
+    );
 
     env.events().publish(
         (symbol_short!("cache"), symbol_short!("ns_clr")),
@@ -317,7 +310,12 @@ pub fn configure_ttl(
 
     env.events().publish(
         (symbol_short!("cache"), symbol_short!("cfg")),
-        (namespace, ttl_seconds, auto_refresh, env.ledger().timestamp()),
+        (
+            namespace,
+            ttl_seconds,
+            auto_refresh,
+            env.ledger().timestamp(),
+        ),
     );
 
     Ok(())

@@ -1,6 +1,8 @@
 //! Examples of safe cross-module contract composition.
 //!
-use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Bytes, BytesN, Env, Symbol, Vec};
+use soroban_sdk::{
+    contracterror, contracttype, symbol_short, Address, Bytes, BytesN, Env, Symbol, Vec,
+};
 
 use crate::reentrancy_guard::{with_guard, ReentrancyError};
 
@@ -82,13 +84,13 @@ impl ComposableResponse {
 // ─── Core Composability Functions ──────────────────────────────────────────
 
 /// Standardized cross-contract caller with input sanitization.
-/// 
+///
 /// # Arguments
 /// * `env` - The contract environment
 /// * `target` - The target contract address
 /// * `method` - The method name to call
 /// * `args` - Serialized arguments for the call
-/// 
+///
 /// # Security
 /// - Validates target address is not null
 /// - Sanitizes method name (max 32 chars)
@@ -143,12 +145,12 @@ pub fn compose_with_external_contract(
 }
 
 /// Validates and sanitizes a composable response.
-/// 
+///
 /// # Validation Checks
 /// - Response size (max 64 bytes for BytesN<64>)
 /// - Checksum verification
 /// - Format validation
-/// 
+///
 /// # Returns
 /// `true` if response is valid, `false` otherwise
 pub fn validate_composable_response(
@@ -164,34 +166,31 @@ pub fn validate_composable_response(
             break;
         }
     }
-    
+
     if all_zero {
         return Err(ComposabilityError::InvalidResponse);
     }
-    
+
     // Additional validation: check for specific magic bytes if protocol requires
     // This is extensible for future protocol versions
     Ok(true)
 }
 
 /// Batch composition - call multiple contracts in sequence.
-/// 
+///
 /// # Arguments
 /// * `calls` - Vector of (target, method, args) tuples
-/// 
+///
 /// # Returns
 /// Vector of results for each call
-/// 
+///
 /// # Burst Support
 /// Supports up to 10 batched calls per transaction
-pub fn batch_compose(
-    env: &Env,
-    calls: Vec<(Address, Symbol, Bytes)>,
-) -> Vec<ComposableResponse> {
+pub fn batch_compose(env: &Env, calls: Vec<(Address, Symbol, Bytes)>) -> Vec<ComposableResponse> {
     const MAX_BATCH_SIZE: u32 = 10;
-    
+
     let mut results = Vec::new(env);
-    
+
     for i in 0..calls.len().min(MAX_BATCH_SIZE) {
         let (target, method, args) = calls.get(i).unwrap();
         let result = compose_with_external_contract(env, &target, method, &args);
@@ -203,14 +202,14 @@ pub fn batch_compose(
             }
         }
     }
-    
+
     results
 }
 
 // ─── Input Sanitization ────────────────────────────────────────────────────
 
 /// Validates a target contract address.
-/// 
+///
 /// # Checks
 /// - Address is not null/empty
 /// - Address format is valid
@@ -219,41 +218,45 @@ fn validate_target_address(env: &Env, target: &Address) -> bool {
     // Check for null address (all zeros would be invalid)
     // In Soroban, we assume Address validation is handled by the runtime
     // but we add additional checks here
-    
+
     // Get current contract address for comparison
     let current = env.current_contract_address();
     if target == &current {
         return false; // Prevent self-calls
     }
-    
+
     true
 }
 
 /// Validates a method name.
-/// 
+///
 /// # Checks
 /// - Symbol length (max 32 characters for Soroban Symbol)
 /// - No invalid characters (handled by Symbol type)
 fn validate_method_name(env: &Env, method: &Symbol) -> bool {
     // Soroban Symbols are limited to 32 characters
     // and automatically validated by the Symbol type
-    
+
     // Reject empty method names
     if method == &Symbol::new(env, "") {
         return false;
     }
-    
+
     true
 }
 
 /// Sanitizes input bytes by removing trailing nulls and limiting size.
-pub fn sanitize_input(env: &Env, input: &Bytes, max_size: u32) -> Result<Bytes, ComposabilityError> {
+pub fn sanitize_input(
+    env: &Env,
+    input: &Bytes,
+    max_size: u32,
+) -> Result<Bytes, ComposabilityError> {
     if input.len() > max_size {
         return Err(ComposabilityError::InputTooLarge);
     }
-    
+
     let mut result = Bytes::new(env);
-    
+
     // Copy non-null bytes up to max_size
     for i in 0..input.len() {
         let byte = input.get(i).unwrap_or(0);
@@ -262,7 +265,7 @@ pub fn sanitize_input(env: &Env, input: &Bytes, max_size: u32) -> Result<Bytes, 
             result.push_back(byte);
         }
     }
-    
+
     Ok(result)
 }
 
@@ -283,12 +286,7 @@ fn emit_composition_trace(
 }
 
 /// Emits a batch composition summary event.
-pub fn emit_batch_summary(
-    env: &Env,
-    total_calls: u32,
-    successful: u32,
-    total_gas: u64,
-) {
+pub fn emit_batch_summary(env: &Env, total_calls: u32, successful: u32, total_gas: u64) {
     env.events().publish(
         (symbol_short!("compose"), symbol_short!("batch")),
         (total_calls, successful, total_gas),
@@ -298,12 +296,12 @@ pub fn emit_batch_summary(
 // ─── Helper Traits and Implementations ─────────────────────────────────────
 
 /// Trait for contract interfaces that can be composed.
-/// 
+///
 /// This trait provides a standardized way to define cross-contract interfaces.
 pub trait ComposableContract {
     /// Returns the contract address.
     fn address(&self) -> &Address;
-    
+
     /// Returns the interface version for compatibility checking.
     fn interface_version(&self) -> u32;
 }
@@ -325,22 +323,22 @@ impl CompositionBuilder {
             args: None,
         }
     }
-    
+
     pub fn target(mut self, addr: Address) -> Self {
         self.target = Some(addr);
         self
     }
-    
+
     pub fn method(mut self, method: Symbol) -> Self {
         self.method = Some(method);
         self
     }
-    
+
     pub fn args(mut self, args: Bytes) -> Self {
         self.args = Some(args);
         self
     }
-    
+
     pub fn build(self) -> Option<(Address, Symbol, Bytes)> {
         match (self.target, self.method, self.args) {
             (Some(t), Some(m), Some(a)) => Some((t, m, a)),
@@ -352,7 +350,7 @@ impl CompositionBuilder {
 // ─── View Functions ───────────────────────────────────────────────────────
 
 /// Get the last composition result (for debugging).
-/// 
+///
 /// Note: This is a simplified implementation. In production,
 /// you'd maintain a ring buffer of recent compositions.
 pub fn get_last_composition_gas(env: &Env) -> u64 {
@@ -380,7 +378,7 @@ impl ResourceMinterInterface {
     pub fn new(address: Address) -> Self {
         Self { address }
     }
-    
+
     /// Compose a harvest resources call.
     pub fn harvest_resources(
         &self,
@@ -402,7 +400,7 @@ impl ShipRegistryInterface {
     pub fn new(address: Address) -> Self {
         Self { address }
     }
-    
+
     /// Compose a get ship call.
     pub fn get_ship(
         &self,

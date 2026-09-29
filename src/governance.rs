@@ -1,4 +1,6 @@
-use soroban_sdk::{contracterror, contracttype, symbol_short, Address, BytesN, Env, String, Symbol};
+use soroban_sdk::{
+    contracterror, contracttype, symbol_short, Address, BytesN, Env, String, Symbol,
+};
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -68,11 +70,20 @@ enum GovernanceDataKey {
     GameParameter(Symbol),
 }
 
-pub fn create_proposal(env: Env, creator: Address, description: String, param_change: BytesN<128>) -> Result<u64, GovError> {
+pub fn create_proposal(
+    env: Env,
+    creator: Address,
+    description: String,
+    param_change: BytesN<128>,
+) -> Result<u64, GovError> {
     creator.require_auth();
 
-    let proposal_id = env.storage().instance().get::<_, u64>(&symbol_short!("next_gid")).unwrap_or(0);
-    
+    let proposal_id = env
+        .storage()
+        .instance()
+        .get::<_, u64>(&symbol_short!("next_gid"))
+        .unwrap_or(0);
+
     let proposal = Proposal {
         id: proposal_id,
         description,
@@ -85,7 +96,9 @@ pub fn create_proposal(env: Env, creator: Address, description: String, param_ch
     };
 
     env.storage().persistent().set(&proposal_id, &proposal);
-    env.storage().instance().set(&symbol_short!("next_gid"), &(proposal_id + 1));
+    env.storage()
+        .instance()
+        .set(&symbol_short!("next_gid"), &(proposal_id + 1));
 
     env.events().publish(
         (symbol_short!("gov"), symbol_short!("prop_crtd")),
@@ -95,11 +108,21 @@ pub fn create_proposal(env: Env, creator: Address, description: String, param_ch
     Ok(proposal_id)
 }
 
-pub fn cast_vote(env: Env, voter: Address, proposal_id: u64, support: bool, essence_weight: i128) -> Result<(), GovError> {
+pub fn cast_vote(
+    env: Env,
+    voter: Address,
+    proposal_id: u64,
+    support: bool,
+    essence_weight: i128,
+) -> Result<(), GovError> {
     voter.require_auth();
 
-    let mut proposal: Proposal = env.storage().persistent().get(&proposal_id).ok_or(GovError::ProposalNotFound)?;
-    
+    let mut proposal: Proposal = env
+        .storage()
+        .persistent()
+        .get(&proposal_id)
+        .ok_or(GovError::ProposalNotFound)?;
+
     if env.ledger().timestamp() > proposal.expiration {
         return Err(GovError::VotingClosed);
     }
@@ -127,8 +150,12 @@ pub fn cast_vote(env: Env, voter: Address, proposal_id: u64, support: bool, esse
 }
 
 pub fn finalize_proposal(env: Env, proposal_id: u64) -> Result<ProposalStatus, GovError> {
-    let mut proposal: Proposal = env.storage().persistent().get(&proposal_id).ok_or(GovError::ProposalNotFound)?;
-    
+    let mut proposal: Proposal = env
+        .storage()
+        .persistent()
+        .get(&proposal_id)
+        .ok_or(GovError::ProposalNotFound)?;
+
     if env.ledger().timestamp() <= proposal.expiration {
         return Err(GovError::VotingClosed); // Still active
     }

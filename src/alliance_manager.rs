@@ -12,14 +12,14 @@ pub const INITIAL_TREASURY: i128 = 0;
 #[derive(Clone)]
 #[contracttype]
 pub enum AllianceKey {
-    Alliance(u64),              // alliance_id -> Alliance
-    AllianceCount,              // -> u64 (next alliance ID)
-    MemberAlliance(Address),    // player -> alliance_id
-    AllianceTreasury(u64),      // alliance_id -> i128
+    Alliance(u64),                    // alliance_id -> Alliance
+    AllianceCount,                    // -> u64 (next alliance ID)
+    MemberAlliance(Address),          // player -> alliance_id
+    AllianceTreasury(u64),            // alliance_id -> i128
     MemberContribution(u64, Address), // (alliance_id, member) -> i128
-    AllianceLevelInfo(u64),     // alliance_id -> GuildLevelInfo
-    TerritoryClaim(u64),        // coordinate_hash -> alliance_id
-    GuildBoss(u64),             // alliance_id -> GuildBossState
+    AllianceLevelInfo(u64),           // alliance_id -> GuildLevelInfo
+    TerritoryClaim(u64),              // coordinate_hash -> alliance_id
+    GuildBoss(u64),                   // alliance_id -> GuildBossState
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -94,36 +94,35 @@ pub struct MembershipRecord {
 }
 
 /// Found a new alliance with initial treasury
-pub fn found_alliance(
-    env: &Env,
-    founder: Address,
-    name: String,
-) -> Result<u64, AllianceError> {
+pub fn found_alliance(env: &Env, founder: Address, name: String) -> Result<u64, AllianceError> {
     founder.require_auth();
-    
-    input_validation::validate_name(env, &name)
-        .map_err(|_| AllianceError::InvalidName)?;
+
+    input_validation::validate_name(env, &name).map_err(|_| AllianceError::InvalidName)?;
 
     // Check if founder is already in an alliance
-    if env.storage().persistent().has(&AllianceKey::MemberAlliance(founder.clone())) {
+    if env
+        .storage()
+        .persistent()
+        .has(&AllianceKey::MemberAlliance(founder.clone()))
+    {
         return Err(AllianceError::AlreadyInAlliance);
     }
-    
+
     if name.len() == 0 {
         return Err(AllianceError::InvalidName);
     }
-    
+
     // Generate alliance ID
     let alliance_id = env
         .storage()
         .persistent()
         .get::<AllianceKey, u64>(&AllianceKey::AllianceCount)
         .unwrap_or(0);
-    
+
     let current_time = env.ledger().timestamp();
     let mut members = Vec::new(env);
     members.push_back(founder.clone());
-    
+
     let alliance = Alliance {
         alliance_id,
         name: name.clone(),
@@ -133,38 +132,40 @@ pub fn found_alliance(
         voting_threshold: MIN_VOTING_THRESHOLD,
         is_active: true,
     };
-    
+
     // Store alliance
     env.storage()
         .persistent()
         .set(&AllianceKey::Alliance(alliance_id), &alliance);
-    
+
     // Update alliance count
     env.storage()
         .persistent()
         .set(&AllianceKey::AllianceCount, &(alliance_id + 1));
-    
+
     // Set founder's alliance membership
     env.storage()
         .persistent()
         .set(&AllianceKey::MemberAlliance(founder.clone()), &alliance_id);
-    
+
     // Initialize treasury
-    env.storage()
-        .persistent()
-        .set(&AllianceKey::AllianceTreasury(alliance_id), &INITIAL_TREASURY);
-    
+    env.storage().persistent().set(
+        &AllianceKey::AllianceTreasury(alliance_id),
+        &INITIAL_TREASURY,
+    );
+
     // Initialize founder contribution
-    env.storage()
-        .persistent()
-        .set(&AllianceKey::MemberContribution(alliance_id, founder.clone()), &0i128);
-    
+    env.storage().persistent().set(
+        &AllianceKey::MemberContribution(alliance_id, founder.clone()),
+        &0i128,
+    );
+
     // Emit event
     env.events().publish(
         (symbol_short!("alliance"), symbol_short!("founded")),
         (alliance_id, name, founder),
     );
-    
+
     Ok(alliance_id)
 }
 
@@ -175,42 +176,47 @@ pub fn join_alliance(
     player: Address,
 ) -> Result<MembershipRecord, AllianceError> {
     player.require_auth();
-    
+
     // Check if player is already in an alliance
-    if env.storage().persistent().has(&AllianceKey::MemberAlliance(player.clone())) {
+    if env
+        .storage()
+        .persistent()
+        .has(&AllianceKey::MemberAlliance(player.clone()))
+    {
         return Err(AllianceError::AlreadyInAlliance);
     }
-    
+
     // Get alliance
     let mut alliance = env
         .storage()
         .persistent()
         .get::<AllianceKey, Alliance>(&AllianceKey::Alliance(alliance_id))
         .ok_or(AllianceError::AllianceNotFound)?;
-    
+
     // Check member limit
     if alliance.members.len() >= MAX_MEMBERS_PER_ALLIANCE.try_into().unwrap() {
         return Err(AllianceError::AllianceFull);
     }
-    
+
     // Add member
     alliance.members.push_back(player.clone());
-    
+
     // Update alliance
     env.storage()
         .persistent()
         .set(&AllianceKey::Alliance(alliance_id), &alliance);
-    
+
     // Set player's alliance membership
     env.storage()
         .persistent()
         .set(&AllianceKey::MemberAlliance(player.clone()), &alliance_id);
-    
+
     // Initialize member contribution
-    env.storage()
-        .persistent()
-        .set(&AllianceKey::MemberContribution(alliance_id, player.clone()), &0i128);
-    
+    env.storage().persistent().set(
+        &AllianceKey::MemberContribution(alliance_id, player.clone()),
+        &0i128,
+    );
+
     let current_time = env.ledger().timestamp();
     let membership = MembershipRecord {
         alliance_id,
@@ -218,37 +224,34 @@ pub fn join_alliance(
         joined_at: current_time,
         contribution: 0,
     };
-    
+
     // Emit event
     env.events().publish(
         (symbol_short!("alliance"), symbol_short!("joined")),
         (alliance_id, player),
     );
-    
+
     Ok(membership)
 }
 
 /// Leave an alliance (revocable membership)
-pub fn leave_alliance(
-    env: &Env,
-    player: Address,
-) -> Result<(), AllianceError> {
+pub fn leave_alliance(env: &Env, player: Address) -> Result<(), AllianceError> {
     player.require_auth();
-    
+
     // Get player's alliance
     let alliance_id = env
         .storage()
         .persistent()
         .get::<AllianceKey, u64>(&AllianceKey::MemberAlliance(player.clone()))
         .ok_or(AllianceError::NotMember)?;
-    
+
     // Get alliance
     let mut alliance = env
         .storage()
         .persistent()
         .get::<AllianceKey, Alliance>(&AllianceKey::Alliance(alliance_id))
         .ok_or(AllianceError::AllianceNotFound)?;
-    
+
     // Remove member from alliance
     let mut updated_members = Vec::new(env);
     for member in alliance.members.iter() {
@@ -256,25 +259,25 @@ pub fn leave_alliance(
             updated_members.push_back(member);
         }
     }
-    
+
     alliance.members = updated_members;
-    
+
     // Update alliance
     env.storage()
         .persistent()
         .set(&AllianceKey::Alliance(alliance_id), &alliance);
-    
+
     // Remove player's alliance membership
     env.storage()
         .persistent()
         .remove(&AllianceKey::MemberAlliance(player.clone()));
-    
+
     // Emit event
     env.events().publish(
         (symbol_short!("alliance"), symbol_short!("left")),
         (alliance_id, player),
     );
-    
+
     Ok(())
 }
 
@@ -285,50 +288,54 @@ pub fn contribute_to_treasury(
     amount: i128,
 ) -> Result<i128, AllianceError> {
     player.require_auth();
-    
+
     if amount <= 0 {
         return Err(AllianceError::Unauthorized);
     }
-    
+
     // Get player's alliance
     let alliance_id = env
         .storage()
         .persistent()
         .get::<AllianceKey, u64>(&AllianceKey::MemberAlliance(player.clone()))
         .ok_or(AllianceError::NotMember)?;
-    
+
     // Update treasury
     let current_treasury = env
         .storage()
         .persistent()
         .get::<AllianceKey, i128>(&AllianceKey::AllianceTreasury(alliance_id))
         .unwrap_or(INITIAL_TREASURY);
-    
+
     let new_treasury = current_treasury.saturating_add(amount);
-    
+
     env.storage()
         .persistent()
         .set(&AllianceKey::AllianceTreasury(alliance_id), &new_treasury);
-    
+
     // Update member contribution
     let current_contribution = env
         .storage()
         .persistent()
-        .get::<AllianceKey, i128>(&AllianceKey::MemberContribution(alliance_id, player.clone()))
+        .get::<AllianceKey, i128>(&AllianceKey::MemberContribution(
+            alliance_id,
+            player.clone(),
+        ))
         .unwrap_or(0);
-    
+
     let new_contribution = current_contribution.saturating_add(amount);
-    
-    env.storage()
-        .persistent()
-        .set(&AllianceKey::MemberContribution(alliance_id, player.clone()), &new_contribution);
-    
+
+    env.storage().persistent().set(
+        &AllianceKey::MemberContribution(alliance_id, player.clone()),
+        &new_contribution,
+    );
+
     // Emit event
     env.events().publish(
         (symbol_short!("alliance"), symbol_short!("contrib")),
         (alliance_id, player, amount, new_treasury),
     );
-    
+
     Ok(new_treasury)
 }
 
@@ -400,7 +407,11 @@ pub fn add_alliance_xp(env: &Env, alliance_id: u64, amount: u64) -> Result<u32, 
     Ok(info.level)
 }
 
-pub fn credit_alliance_treasury(env: &Env, alliance_id: u64, amount: i128) -> Result<i128, AllianceError> {
+pub fn credit_alliance_treasury(
+    env: &Env,
+    alliance_id: u64,
+    amount: i128,
+) -> Result<i128, AllianceError> {
     if amount <= 0 {
         return Ok(get_alliance_treasury(env, alliance_id));
     }
@@ -428,8 +439,7 @@ pub fn claim_guild_territory(
 ) -> Result<(), AllianceError> {
     player.require_auth();
 
-    let alliance_id = get_player_alliance(env, player.clone())
-        .ok_or(AllianceError::NotMember)?;
+    let alliance_id = get_player_alliance(env, player.clone()).ok_or(AllianceError::NotMember)?;
 
     let cost = 500i128;
     let treasury_key = AllianceKey::AllianceTreasury(alliance_id);
@@ -464,14 +474,10 @@ pub fn get_territory_owner(env: &Env, coordinate_hash: u64) -> Option<u64> {
 
 // ── Boss Encounters ──────────────────────────────────────────────────────────
 
-pub fn spawn_guild_boss(
-    env: &Env,
-    player: Address,
-) -> Result<(), AllianceError> {
+pub fn spawn_guild_boss(env: &Env, player: Address) -> Result<(), AllianceError> {
     player.require_auth();
 
-    let alliance_id = get_player_alliance(env, player.clone())
-        .ok_or(AllianceError::NotMember)?;
+    let alliance_id = get_player_alliance(env, player.clone()).ok_or(AllianceError::NotMember)?;
 
     let cost = 1000i128;
     let treasury_key = AllianceKey::AllianceTreasury(alliance_id);
@@ -513,8 +519,7 @@ pub fn attack_guild_boss(
 ) -> Result<GuildBossState, AllianceError> {
     player.require_auth();
 
-    let alliance_id = get_player_alliance(env, player.clone())
-        .ok_or(AllianceError::NotMember)?;
+    let alliance_id = get_player_alliance(env, player.clone()).ok_or(AllianceError::NotMember)?;
 
     let boss_key = AllianceKey::GuildBoss(alliance_id);
     let mut boss: GuildBossState = env
@@ -536,7 +541,12 @@ pub fn attack_guild_boss(
         let _ = add_alliance_xp(env, alliance_id, 1500u64);
 
         // Contribute quest progress
-        let _ = crate::guild_quests::contribute_quest_progress(env, player.clone(), symbol_short!("boss_kill"), 1);
+        let _ = crate::guild_quests::contribute_quest_progress(
+            env,
+            player.clone(),
+            symbol_short!("boss_kill"),
+            1,
+        );
     }
 
     env.storage().persistent().set(&boss_key, &boss);

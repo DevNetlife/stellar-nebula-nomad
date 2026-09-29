@@ -183,10 +183,7 @@ pub fn register_portal_batch(
 }
 
 /// Return the current stability percentage and travel cost for a portal.
-pub fn query_portal_status(
-    env: &Env,
-    portal_id: u64,
-) -> Result<(u32, i128), PortalError> {
+pub fn query_portal_status(env: &Env, portal_id: u64) -> Result<(u32, i128), PortalError> {
     let portal: Portal = env
         .storage()
         .persistent()

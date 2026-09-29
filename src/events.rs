@@ -323,7 +323,15 @@ pub fn topic_ship_mint_rec() -> Symbol {
 ///
 /// The previous `(evt, topic)` pair padded every event with a redundant
 /// `evt` symbol that no consumer can filter on; a single topic keeps the
-/// event stream the same size for one less symbol per emission.
+/// event stream the same size for one less symbol per emission. Every
+/// emission in the crate that goes through a helper goes through this one —
+/// `event_framework` publishes through it too, so there is exactly one
+/// topic convention to keep small.
+///
+/// `data` may be a whole batch: publishing a `Vec` of payloads as one event
+/// costs one topic list and one event header (~3,700 CPU instructions plus
+/// the bytes), where the same payloads as separate events pay that fixed
+/// cost once each *before* any of their bytes are counted.
 pub fn emit(env: &Env, topic: Symbol, data: impl soroban_sdk::IntoVal<Env, soroban_sdk::Val>) {
     env.events().publish((topic,), data);
 }

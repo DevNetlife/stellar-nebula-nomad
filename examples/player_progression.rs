@@ -59,7 +59,10 @@ fn main() {
     }
     println!("Tutorial rewards earned: {earned}");
     if let Some(progress) = client.get_tutorial_progress(&player) {
-        println!("Steps completed: {}/{}", progress.completed_count, TOTAL_STEPS);
+        println!(
+            "Steps completed: {}/{}",
+            progress.completed_count, TOTAL_STEPS
+        );
     }
 
     // ── Step 3: Ship and session ─────────────────────────────────────────

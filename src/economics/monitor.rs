@@ -52,26 +52,26 @@ pub fn update_supply_metrics(
     staked_supply: i128,
 ) {
     admin.require_auth();
-    
-    let mut metrics: EconomicMetrics = env
-        .storage()
-        .persistent()
-        .get(&EconKey::Metrics)
-        .unwrap_or(EconomicMetrics {
-            total_supply: 0,
-            circulating_supply: 0,
-            staked_supply: 0,
-            inflation_rate_bps: 500,
-            last_update: 0,
-        });
-    
+
+    let mut metrics: EconomicMetrics =
+        env.storage()
+            .persistent()
+            .get(&EconKey::Metrics)
+            .unwrap_or(EconomicMetrics {
+                total_supply: 0,
+                circulating_supply: 0,
+                staked_supply: 0,
+                inflation_rate_bps: 500,
+                last_update: 0,
+            });
+
     metrics.total_supply = total_supply;
     metrics.circulating_supply = circulating_supply;
     metrics.staked_supply = staked_supply;
     metrics.last_update = env.ledger().timestamp();
-    
+
     env.storage().persistent().set(&EconKey::Metrics, &metrics);
-    
+
     env.events().publish(
         (symbol_short!("econ"), symbol_short!("supply")),
         (total_supply, circulating_supply, staked_supply),
@@ -87,22 +87,22 @@ pub fn track_resource_activity(
     avg_price: i128,
 ) {
     let key = EconKey::ResourceMetrics(resource_type.clone());
-    let mut metrics: ResourceMetrics = env
-        .storage()
-        .persistent()
-        .get(&key)
-        .unwrap_or(ResourceMetrics {
-            resource_type: resource_type.clone(),
-            total_minted: 0,
-            total_burned: 0,
-            avg_price: 0,
-            price_change_24h: 0,
-        });
-    
+    let mut metrics: ResourceMetrics =
+        env.storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or(ResourceMetrics {
+                resource_type: resource_type.clone(),
+                total_minted: 0,
+                total_burned: 0,
+                avg_price: 0,
+                price_change_24h: 0,
+            });
+
     metrics.total_minted += minted;
     metrics.total_burned += burned;
     metrics.avg_price = avg_price;
-    
+
     env.storage().persistent().set(&key, &metrics);
 }
 
@@ -154,10 +154,10 @@ mod tests {
         let env = Env::default();
         env.mock_all_auths();
         let admin = Address::generate(&env);
-        
+
         initialize_monitor(&env, &admin);
         update_supply_metrics(&env, &admin, 1000000, 800000, 200000);
-        
+
         let metrics = get_metrics(&env);
         assert_eq!(metrics.total_supply, 1000000);
         assert_eq!(metrics.circulating_supply, 800000);
@@ -175,10 +175,10 @@ mod tests {
     fn test_resource_tracking() {
         let env = Env::default();
         let resource = symbol_short!("dust");
-        
+
         track_resource_activity(&env, resource.clone(), 1000, 100, 50);
         let metrics = get_resource_metrics(&env, resource);
-        
+
         assert_eq!(metrics.total_minted, 1000);
         assert_eq!(metrics.total_burned, 100);
         assert_eq!(metrics.avg_price, 50);

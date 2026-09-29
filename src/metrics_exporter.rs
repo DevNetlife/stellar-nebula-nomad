@@ -1,6 +1,4 @@
-use soroban_sdk::{
-    contracterror, contracttype, symbol_short, Address, Env, Symbol, Vec, Map,
-};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Map, Symbol, Vec};
 
 // ─── Prometheus Metrics Exporter for Soroban Contracts ─────────────────────
 //

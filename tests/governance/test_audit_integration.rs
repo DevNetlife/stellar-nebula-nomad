@@ -3,7 +3,7 @@
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, BytesN, Env};
 use stellar_nebula_nomad::{
-    audit_logger::{AuditEntry, log_audit_event, query_audit_logs, get_audit_count},
+    audit_logger::{get_audit_count, log_audit_event, query_audit_logs, AuditEntry},
     NebulaNomadContract, NebulaNomadContractClient,
 };
 
@@ -75,8 +75,7 @@ fn test_audit_log_query_filter() {
         let _ = log_audit_event(&env, Some(&player), action2.clone(), details.clone());
         let _ = log_audit_event(&env, Some(&player), action1.clone(), details.clone());
 
-        let results = query_audit_logs(&env, action1.clone(), 10)
-            .expect("query should succeed");
+        let results = query_audit_logs(&env, action1.clone(), 10).expect("query should succeed");
         assert_eq!(results.len(), 2);
 
         for entry in &results {
@@ -133,8 +132,7 @@ fn test_audit_log_query_respects_limit() {
             let _ = log_audit_event(&env, Some(&player), action.clone(), details.clone());
         }
 
-        let results = query_audit_logs(&env, action.clone(), 5)
-            .expect("query should succeed");
+        let results = query_audit_logs(&env, action.clone(), 5).expect("query should succeed");
         assert_eq!(results.len(), 5);
     });
 }
@@ -151,8 +149,7 @@ fn test_audit_log_query_all_with_zero_limit() {
             let _ = log_audit_event(&env, Some(&player), action.clone(), details.clone());
         }
 
-        let results = query_audit_logs(&env, action.clone(), 0)
-            .expect("query should succeed");
+        let results = query_audit_logs(&env, action.clone(), 0).expect("query should succeed");
         assert!(results.len() > 0);
     });
 }
@@ -211,8 +208,7 @@ fn test_audit_log_timestamps_increase() {
             max_entry_ttl: 10_000,
         });
 
-        let entry2 = log_audit_event(&env, Some(&player), action, details)
-            .expect("second log");
+        let entry2 = log_audit_event(&env, Some(&player), action, details).expect("second log");
 
         assert!(entry2.timestamp > entry1.timestamp);
     });

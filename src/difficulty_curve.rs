@@ -324,12 +324,8 @@ mod tests {
         let admin = Address::generate(&env);
         env.as_contract(&contract_id, || {
             let config = get_curve_config(&env);
-            let result = adjust_curve_parameter(
-                &env,
-                &admin,
-                symbol_short!("floor"),
-                config.cap + 1,
-            );
+            let result =
+                adjust_curve_parameter(&env, &admin, symbol_short!("floor"), config.cap + 1);
             assert_eq!(result, Err(CurveError::InvalidValue));
         });
     }

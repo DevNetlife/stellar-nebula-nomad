@@ -91,7 +91,9 @@ fn load_registry(env: &Env) -> Vec<Symbol> {
 }
 
 fn store_registry(env: &Env, registry: &Vec<Symbol>) {
-    env.storage().persistent().set(&HealthKey::Registry, registry);
+    env.storage()
+        .persistent()
+        .set(&HealthKey::Registry, registry);
 }
 
 fn record_metric(env: &Env, metric: Symbol, value: u64) -> HealthMetricSummary {
@@ -117,8 +119,7 @@ fn record_metric(env: &Env, metric: Symbol, value: u64) -> HealthMetricSummary {
     let exists = env
         .storage()
         .persistent()
-        .has(&HealthKey::Metric(metric.clone()))
-        ;
+        .has(&HealthKey::Metric(metric.clone()));
 
     let mut aggregate = if exists {
         env.storage()

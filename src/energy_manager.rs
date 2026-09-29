@@ -99,7 +99,9 @@ pub fn consume_energy(env: &Env, ship_id: u64, amount: u32) -> Result<u32, Energ
         return Err(EnergyError::InsufficientEnergy);
     }
 
-    let new_balance = current.checked_sub(amount).ok_or(EnergyError::NegativeBalance)?;
+    let new_balance = current
+        .checked_sub(amount)
+        .ok_or(EnergyError::NegativeBalance)?;
 
     env.storage()
         .persistent()

@@ -1,6 +1,4 @@
-use soroban_sdk::{
-    contracterror, contracttype, symbol_short, Address, Env, Vec, Symbol
-};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbol, Vec};
 /// Maximum batch size for recycle/craft operations.
 pub const RECYCLE_CRAFT_BATCH_SIZE: u32 = 8;
 
@@ -77,11 +75,7 @@ pub struct CraftingResult {
 
 /// Initialize the recipe library at deployment.
 pub fn initialize_recycling(env: &Env) {
-    if !env
-        .storage()
-        .instance()
-        .has(&RecyclingKey::RecipeCounter)
-    {
+    if !env.storage().instance().has(&RecyclingKey::RecipeCounter) {
         env.storage()
             .instance()
             .set(&RecyclingKey::RecipeCounter, &0u64);

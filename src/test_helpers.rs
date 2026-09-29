@@ -203,8 +203,8 @@ pub fn event_topics(env: &Env, index: usize) -> Option<std::vec::Vec<std::string
 /// True when some emitted event's symbol topics start with `prefix`.
 pub fn has_event_topics(env: &Env, prefix: &[&str]) -> bool {
     (0..event_count(env)).any(|i| {
-        event_topics(env, i)
-            .is_some_and(|topics| topics.len() >= prefix.len()
-                && topics.iter().zip(prefix.iter()).all(|(t, p)| t == p))
+        event_topics(env, i).is_some_and(|topics| {
+            topics.len() >= prefix.len() && topics.iter().zip(prefix.iter()).all(|(t, p)| t == p)
+        })
     })
 }

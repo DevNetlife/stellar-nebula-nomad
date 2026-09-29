@@ -63,10 +63,18 @@ fn main() {
     // Each bad input maps to its own error code (see docs/ERROR_CODES.md).
     let zero_seed = BytesN::from_array(&env, &[0u8; 32]);
     let cases = [
-        ("ship_id = 0", nebula.try_generate_validated_nebula_layout(&pilot, &0, &region_id, &seed)),
+        (
+            "ship_id = 0",
+            nebula.try_generate_validated_nebula_layout(&pilot, &0, &region_id, &seed),
+        ),
         (
             "region_id > MAX",
-            nebula.try_generate_validated_nebula_layout(&pilot, &ship_id, &(MAX_REGION_ID + 1), &seed),
+            nebula.try_generate_validated_nebula_layout(
+                &pilot,
+                &ship_id,
+                &(MAX_REGION_ID + 1),
+                &seed,
+            ),
         ),
         (
             "all-zero seed",
@@ -113,6 +121,9 @@ fn main() {
 
     // Extend the TTL for future layouts (admin only, must be > 0).
     nebula.update_layout_ttl(&86_400u64);
-    assert_eq!(nebula.try_update_layout_ttl(&0u64), Err(Ok(NebulaError::InvalidTtl)));
+    assert_eq!(
+        nebula.try_update_layout_ttl(&0u64),
+        Err(Ok(NebulaError::InvalidTtl))
+    );
     println!("Layout TTL updated to 24h.");
 }

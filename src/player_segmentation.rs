@@ -3,8 +3,8 @@
 //! Segments players based on activity patterns, spending, and engagement levels
 //! to enable targeted marketing campaigns and personalized experiences.
 
-use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbol, Vec};
 use crate::error_standard::{ErrorDescriptor, ErrorKind, StandardContractError};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbol, Vec};
 
 // ── Error ─────────────────────────────────────────────────────────────────────
 
@@ -89,8 +89,8 @@ pub struct SegmentMetrics {
     pub segment_name: Symbol,
     pub member_count: u32,
     pub avg_lifetime_value: u64,
-    pub retention_rate: u32, // basis points (0-10000)
-    pub churn_rate: u32,     // basis points (0-10000)
+    pub retention_rate: u32,   // basis points (0-10000)
+    pub churn_rate: u32,       // basis points (0-10000)
     pub engagement_score: u32, // 0-100
 }
 
@@ -124,7 +124,8 @@ pub fn update_player_engagement(
     metrics.total_transactions = metrics.total_transactions.saturating_add(transactions);
 
     if metrics.sessions_last_7d > 0 {
-        metrics.avg_session_duration = (metrics.avg_session_duration * (metrics.sessions_last_7d - sessions) as u64
+        metrics.avg_session_duration = (metrics.avg_session_duration
+            * (metrics.sessions_last_7d - sessions) as u64
             + session_duration * sessions as u64)
             / metrics.sessions_last_7d as u64;
     } else {
@@ -159,12 +160,7 @@ pub fn update_player_engagement(
 }
 
 /// Manually transition a player to a specific segment.
-pub fn set_player_segment(
-    env: &Env,
-    admin: &Address,
-    player: &Address,
-    segment: PlayerSegment,
-) {
+pub fn set_player_segment(env: &Env, admin: &Address, player: &Address, segment: PlayerSegment) {
     admin.require_auth();
 
     let old_segment: PlayerSegment = env
@@ -362,9 +358,10 @@ pub fn update_segment_metrics(
         engagement_score: engagement,
     };
 
-    env.storage()
-        .persistent()
-        .set(&SegmentKey::SegmentMetrics(segment_to_symbol(segment)), &metrics);
+    env.storage().persistent().set(
+        &SegmentKey::SegmentMetrics(segment_to_symbol(segment)),
+        &metrics,
+    );
 
     env.events().publish(
         (symbol_short!("seg"), symbol_short!("metrics")),

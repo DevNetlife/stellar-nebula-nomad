@@ -24,10 +24,8 @@ pub struct ContractStats {
 /// Register contract metadata for StellarExpert indexing
 pub fn register_expert_metadata(env: &Env, admin: &Address, metadata: ExpertMetadata) {
     admin.require_auth();
-    env.events().publish(
-        (symbol_short!("expert"), symbol_short!("meta")),
-        metadata,
-    );
+    env.events()
+        .publish((symbol_short!("expert"), symbol_short!("meta")), metadata);
 }
 
 /// Emit contract interaction event for StellarExpert analytics
@@ -56,10 +54,8 @@ pub fn emit_activity_event(env: &Env, user: &Address, action: String) {
 
 /// Emit contract stats snapshot for analytics dashboards
 pub fn emit_stats_snapshot(env: &Env, stats: ContractStats) {
-    env.events().publish(
-        (symbol_short!("expert"), symbol_short!("stats")),
-        stats,
-    );
+    env.events()
+        .publish((symbol_short!("expert"), symbol_short!("stats")), stats);
 }
 
 #[cfg(test)]
@@ -77,7 +73,10 @@ mod tests {
             name: String::from_str(&env, "Nebula Nomad"),
             description: String::from_str(&env, "Space exploration game"),
             homepage: String::from_str(&env, "https://nebulanomad.io"),
-            repository: String::from_str(&env, "https://github.com/Space-Nebula/stellar-nebula-nomad"),
+            repository: String::from_str(
+                &env,
+                "https://github.com/Space-Nebula/stellar-nebula-nomad",
+            ),
         };
         register_expert_metadata(&env, &admin, metadata);
     }

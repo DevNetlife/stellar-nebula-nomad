@@ -103,9 +103,7 @@ pub fn initialize_prize_distributor(env: &Env, admin: &Address) {
     env.storage()
         .instance()
         .set(&PrizeKey::TotalDistributed, &0i128);
-    env.storage()
-        .instance()
-        .set(&PrizeKey::SnapshotSize, &0u32);
+    env.storage().instance().set(&PrizeKey::SnapshotSize, &0u32);
 }
 
 /// Add `amount` tokens to the weekly prize pool. Anyone may fund the pool
@@ -158,9 +156,7 @@ pub fn submit_leaderboard_snapshot(
             .persistent()
             .set(&PrizeKey::Snapshot(rank), &winners.get(i).unwrap());
     }
-    env.storage()
-        .instance()
-        .set(&PrizeKey::SnapshotSize, &size);
+    env.storage().instance().set(&PrizeKey::SnapshotSize, &size);
 
     Ok(size)
 }
@@ -204,11 +200,7 @@ pub fn distribute_weekly_prizes(
 
     let effective_n = top_n.min(snapshot_size);
 
-    let pool: i128 = env
-        .storage()
-        .instance()
-        .get(&PrizeKey::Pool)
-        .unwrap_or(0);
+    let pool: i128 = env.storage().instance().get(&PrizeKey::Pool).unwrap_or(0);
 
     // Verify pool is large enough (at least 1 unit per position).
     if pool < effective_n as i128 {
@@ -259,24 +251,17 @@ pub fn distribute_weekly_prizes(
         .set(&PrizeKey::TotalDistributed, &(prev_total + total_paid));
 
     // Record weekly reset timestamp.
-    env.storage()
-        .instance()
-        .set(&PrizeKey::LastReset, &now);
+    env.storage().instance().set(&PrizeKey::LastReset, &now);
 
     // Clear snapshot.
-    env.storage()
-        .instance()
-        .set(&PrizeKey::SnapshotSize, &0u32);
+    env.storage().instance().set(&PrizeKey::SnapshotSize, &0u32);
 
     Ok(records)
 }
 
 /// Return the current prize pool balance.
 pub fn get_prize_pool(env: &Env) -> i128 {
-    env.storage()
-        .instance()
-        .get(&PrizeKey::Pool)
-        .unwrap_or(0)
+    env.storage().instance().get(&PrizeKey::Pool).unwrap_or(0)
 }
 
 /// Return the cumulative total distributed since contract init.

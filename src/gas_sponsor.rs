@@ -115,8 +115,8 @@ impl Default for SponsorConfig {
             min_threshold: 10_000_000, // 1 XLM in stroops
             sponsor_amount: 100_000,   // 0.01 XLM per scan
             daily_cap: MAX_DAILY_SPONSORSHIPS,
-            per_user_cap: 1_000_000,   // 0.1 XLM lifetime per user
-            per_user_daily_cap: 3,     // 3 sponsorships per user per day
+            per_user_cap: 1_000_000, // 0.1 XLM lifetime per user
+            per_user_daily_cap: 3,   // 3 sponsorships per user per day
         }
     }
 }
@@ -153,7 +153,9 @@ pub fn initialize(env: &Env, admin: &Address, initial_fund: i128) -> Result<(), 
     }
 
     env.storage().instance().set(&DataKey::Admin, admin);
-    env.storage().instance().set(&DataKey::FundBalance, &initial_fund);
+    env.storage()
+        .instance()
+        .set(&DataKey::FundBalance, &initial_fund);
     env.storage().instance().set(&DataKey::DailyCounter, &0u32);
     env.storage()
         .instance()
@@ -173,13 +175,13 @@ pub fn initialize(env: &Env, admin: &Address, initial_fund: i128) -> Result<(), 
 // ─── Core Sponsorship Logic ────────────────────────────────────────────────
 
 /// Sponsor the first scan for a new player, covering their gas costs.
-/// 
+///
 /// # Requirements
 /// - Player must have a verified profile (initialized)
 /// - Player must not have been sponsored before (one-time only)
 /// - Daily sponsorship cap must not be exceeded
 /// - Fund must have sufficient balance
-/// 
+///
 /// # Returns
 /// - Ok(sponsor_amount) if sponsorship succeeds
 /// - Err(SponsorError) if any requirement fails
@@ -243,7 +245,10 @@ pub fn sponsor_first_scan(env: &Env, player: &Address) -> Result<i128, SponsorEr
     }
 
     // All checks passed. Write each value once.
-    instance.set(&DataKey::FundBalance, &(fund_balance - config.sponsor_amount));
+    instance.set(
+        &DataKey::FundBalance,
+        &(fund_balance - config.sponsor_amount),
+    );
     instance.set(&DataKey::SponsoredStatus(player.clone()), &true);
     instance.set(&DataKey::DailyCounter, &(current_count + 1));
     instance.set(&lifetime_key, &(user_lifetime + config.sponsor_amount));
@@ -259,10 +264,14 @@ pub fn sponsor_first_scan(env: &Env, player: &Address) -> Result<i128, SponsorEr
 }
 
 /// Admin-only function to replenish the sponsorship fund.
-/// 
+///
 /// # Authorization
 /// Only the configured admin can call this function.
-pub fn claim_sponsorship_fund(env: &Env, admin: &Address, amount: i128) -> Result<i128, SponsorError> {
+pub fn claim_sponsorship_fund(
+    env: &Env,
+    admin: &Address,
+    amount: i128,
+) -> Result<i128, SponsorError> {
     admin.require_auth();
 
     // Verify admin
@@ -287,7 +296,9 @@ pub fn claim_sponsorship_fund(env: &Env, admin: &Address, amount: i128) -> Resul
         .get(&DataKey::FundBalance)
         .unwrap_or(0);
     let new_balance = current_balance + amount;
-    env.storage().instance().set(&DataKey::FundBalance, &new_balance);
+    env.storage()
+        .instance()
+        .set(&DataKey::FundBalance, &new_balance);
 
     env.events().publish(
         (symbol_short!("sponsor"), symbol_short!("funded")),
@@ -365,11 +376,11 @@ fn is_profile_verified(env: &Env, player: &Address) -> bool {
     // Profile IDs are sequential, so we check common range
     // In a real implementation, we'd have a direct lookup mapping
     // For now, we assume verification passes if player has interacted with profile system
-    
+
     // Check if player has been marked as having a profile via a direct storage lookup
     // This is a simplified check - the actual player_profile module would need
     // to expose a has_profile function
-    
+
     // For integration purposes, we'll check a special flag that could be set
     // when a profile is initialized
     let profile_key = (Symbol::new(env, "ProfileExists"), player.clone());
@@ -385,9 +396,7 @@ fn is_profile_verified(env: &Env, player: &Address) -> bool {
 /// need to read `DailyCounter` again.
 fn reset_daily_counter_if_needed(env: &Env) -> u32 {
     let instance = env.storage().instance();
-    let last_reset: u64 = instance
-        .get(&DataKey::LastResetTimestamp)
-        .unwrap_or(0);
+    let last_reset: u64 = instance.get(&DataKey::LastResetTimestamp).unwrap_or(0);
     let current_time = env.ledger().timestamp();
 
     // 24 hours = 86400 seconds
@@ -413,7 +422,10 @@ fn reset_user_daily_counter_if_needed(env: &Env, player: &Address) -> u32 {
 
     if current_time >= last_reset + 86400 {
         instance.set(&daily_key, &0u32);
-        instance.set(&DataKey::UserLastResetTimestamp(player.clone()), &current_time);
+        instance.set(
+            &DataKey::UserLastResetTimestamp(player.clone()),
+            &current_time,
+        );
         0
     } else {
         instance.get(&daily_key).unwrap_or(0)
@@ -423,9 +435,7 @@ fn reset_user_daily_counter_if_needed(env: &Env, player: &Address) -> u32 {
 /// Mark a player as having a verified profile (called by player_profile during init).
 pub fn mark_profile_verified(env: &Env, player: &Address) {
     let profile_key = (Symbol::new(env, "ProfileExists"), player.clone());
-    env.storage()
-        .instance()
-        .set(&profile_key, &true);
+    env.storage().instance().set(&profile_key, &true);
 }
 
 /// Update the sponsorship configuration (admin only).
@@ -466,7 +476,13 @@ pub fn update_config(
 
     env.events().publish(
         (symbol_short!("sponsor"), symbol_short!("config")),
-        (min_threshold, sponsor_amount, daily_cap, per_user_cap, per_user_daily_cap),
+        (
+            min_threshold,
+            sponsor_amount,
+            daily_cap,
+            per_user_cap,
+            per_user_daily_cap,
+        ),
     );
 
     Ok(config)
@@ -552,9 +568,8 @@ pub fn revoke_mobile_session(env: &Env, player: &Address) -> Result<(), SponsorE
     // separate `has` check is unnecessary.
     let key = DataKey::SessionKey(player.clone());
     let instance = env.storage().instance();
-    let mut session: MobileSessionKey = instance
-        .get(&key)
-        .ok_or(SponsorError::SessionKeyInvalid)?;
+    let mut session: MobileSessionKey =
+        instance.get(&key).ok_or(SponsorError::SessionKeyInvalid)?;
 
     // Expire the session in place
     session.expires_at = 0;

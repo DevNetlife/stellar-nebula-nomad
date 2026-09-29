@@ -44,7 +44,10 @@ pub struct EventFilter {
 /// Emits an event so an off-chain indexer can respond with live data.
 pub fn query_account_info(env: &Env, address: &Address) -> AccountInfo {
     env.events().publish(
-        (soroban_sdk::symbol_short!("horizon"), soroban_sdk::symbol_short!("query")),
+        (
+            soroban_sdk::symbol_short!("horizon"),
+            soroban_sdk::symbol_short!("query"),
+        ),
         address.clone(),
     );
 
@@ -59,13 +62,12 @@ pub fn query_account_info(env: &Env, address: &Address) -> AccountInfo {
 
 /// Emit a transaction for Horizon indexing.
 /// Returns a `TransactionResult` confirming the submission was recorded.
-pub fn submit_transaction(
-    env: &Env,
-    tx_hash: String,
-    operation: String,
-) -> TransactionResult {
+pub fn submit_transaction(env: &Env, tx_hash: String, operation: String) -> TransactionResult {
     env.events().publish(
-        (soroban_sdk::symbol_short!("horizon"), soroban_sdk::symbol_short!("tx")),
+        (
+            soroban_sdk::symbol_short!("horizon"),
+            soroban_sdk::symbol_short!("tx"),
+        ),
         (tx_hash.clone(), operation.clone()),
     );
 
@@ -89,15 +91,25 @@ pub fn emit_tx_for_indexing(env: &Env, tx_hash: String, operation: String) {
 /// indexers know to forward matching events to this subscriber.
 pub fn stream_events(env: &Env, subscriber: &Address, filter: EventFilter) {
     env.events().publish(
-        (soroban_sdk::symbol_short!("horizon"), soroban_sdk::symbol_short!("stream")),
-        (subscriber.clone(), filter.topic.clone(), filter.sub_topic.clone()),
+        (
+            soroban_sdk::symbol_short!("horizon"),
+            soroban_sdk::symbol_short!("stream"),
+        ),
+        (
+            subscriber.clone(),
+            filter.topic.clone(),
+            filter.sub_topic.clone(),
+        ),
     );
 }
 
 /// Cancel an active event-stream subscription for `subscriber`.
 pub fn unsubscribe_stream(env: &Env, subscriber: &Address) {
     env.events().publish(
-        (soroban_sdk::symbol_short!("horizon"), soroban_sdk::symbol_short!("unsub")),
+        (
+            soroban_sdk::symbol_short!("horizon"),
+            soroban_sdk::symbol_short!("unsub"),
+        ),
         subscriber.clone(),
     );
 }
@@ -127,8 +139,14 @@ mod tests {
 
         let topics =
             crate::test_helpers::event_topics(&env, 0).expect("expected at least one event");
-        assert_eq!(topics.get(0).map(std::string::String::as_str), Some("horizon"));
-        assert_eq!(topics.get(1).map(std::string::String::as_str), Some("query"));
+        assert_eq!(
+            topics.get(0).map(std::string::String::as_str),
+            Some("horizon")
+        );
+        assert_eq!(
+            topics.get(1).map(std::string::String::as_str),
+            Some("query")
+        );
     }
 
     // ── Transaction submission ────────────────────────────────────────────────
@@ -194,7 +212,10 @@ mod tests {
         stream_events(&env, &subscriber, filter);
 
         let topics = crate::test_helpers::event_topics(&env, 0).unwrap();
-        assert_eq!(topics.get(1).map(std::string::String::as_str), Some("stream"));
+        assert_eq!(
+            topics.get(1).map(std::string::String::as_str),
+            Some("stream")
+        );
     }
 
     #[test]
@@ -216,7 +237,10 @@ mod tests {
         unsubscribe_stream(&env, &subscriber);
 
         let topics = crate::test_helpers::event_topics(&env, 0).unwrap();
-        assert_eq!(topics.get(1).map(std::string::String::as_str), Some("unsub"));
+        assert_eq!(
+            topics.get(1).map(std::string::String::as_str),
+            Some("unsub")
+        );
     }
 
     #[test]

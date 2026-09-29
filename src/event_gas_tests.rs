@@ -14,10 +14,14 @@
 //! | `cache_with_ttl` (control, 1 event kept) | 23349 | 23349 | unchanged |
 //! | `rollover_season` | 2 events | 1 event | −2.7% |
 //! | `repair_ship` | 2 events | 1 event | −2% |
+//! | `emit_standard_event` (framework) | 76118 | 44320 | −41.8% |
+//! | `emit_standard_event_burst` (15 payloads) | 605759 / 15 events | 433705 / 1 event | −28.4%, −14 events |
 
 use crate::nebula_gen::{NebulaGen, NebulaGenClient};
 use crate::test_helpers::event_count;
-use crate::{access_control, cache_ttl_manager, difficulty_scaler, nft_marketplace, seasons};
+use crate::{
+    access_control, cache_ttl_manager, difficulty_scaler, event_framework, nft_marketplace, seasons,
+};
 use soroban_sdk::testutils::{Address as _, Ledger};
 use soroban_sdk::{contract, contractimpl, symbol_short, Address, BytesN, Env};
 
@@ -265,4 +269,167 @@ fn repair_ship_emits_one_combined_event() {
         crate::test_helpers::has_event_topics(&env, &["ship_rep", "repaired"]),
         "expected a ship_rep/repaired event"
     );
+}
+
+// ─── standardized event framework ────────────────────────────────────────────
+
+/// Seed the framework's default schemas in its own invocation, so the
+/// measured emission below pays nothing for setup.
+fn init_framework(env: &Env, contract: &Address) {
+    let admin = Address::generate(env);
+    env.as_contract(contract, || {
+        event_framework::init_event_framework(env, &admin)
+    });
+}
+
+/// One record, one event, one topic — and only the unavoidable work left.
+///
+/// Baseline (persistent tier for the schema lookup and for both emit
+/// counters): **76,118** instructions. Schema versions and counters now live
+/// in instance storage, so the record write and the publish are all that
+/// remains of that cost.
+#[test]
+fn standard_event_emit_keeps_only_the_record_write_and_publish() {
+    let (env, contract) = setup();
+    init_framework(&env, &contract);
+    let caller = Address::generate(&env);
+    let payload = BytesN::from_array(&env, &[7u8; 256]);
+
+    let (cost, events) = run(&env, &contract, "emit_standard_event", || {
+        let _ = event_framework::emit_standard_event(
+            &env,
+            &caller,
+            symbol_short!("system"),
+            payload.clone(),
+        );
+    });
+
+    assert_eq!(events, 1, "one record must publish exactly one event");
+    let topics = crate::test_helpers::event_topics(&env, 0).expect("event topics");
+    assert_eq!(
+        topics,
+        std::vec![std::string::String::from("system")],
+        "standard events go through events::emit: one topic, no wrapper symbol"
+    );
+    assert!(
+        cost <= 48_000,
+        "emit_standard_event cost {cost} above ceiling 48000 (baseline 76118)"
+    );
+}
+
+/// A burst stores every payload as its own record but publishes a **single**
+/// batched event, and advances both counters with one instance write for the
+/// whole batch. Baseline: **605,759** instructions across **15** events.
+#[test]
+fn burst_stores_every_payload_but_publishes_one_event() {
+    let (env, contract) = setup();
+    init_framework(&env, &contract);
+    let caller = Address::generate(&env);
+    let payload = BytesN::from_array(&env, &[7u8; 256]);
+    let mut payloads = soroban_sdk::Vec::new(&env);
+    for _ in 0..15 {
+        payloads.push_back(payload.clone());
+    }
+
+    let (cost, events) = run(&env, &contract, "emit_standard_event_burst", || {
+        let emitted = event_framework::emit_standard_event_burst(
+            &env,
+            &caller,
+            symbol_short!("system"),
+            payloads.clone(),
+        )
+        .ok();
+        assert_eq!(emitted, Some(15));
+    });
+
+    assert_eq!(events, 1, "15 payloads are one operation: one event");
+
+    // Every payload is still an individually addressable record, and the ids
+    // stay consecutive so consumers can derive them from the batch's first id.
+    env.as_contract(&contract, || {
+        let records = event_framework::query_recent_events(&env, &symbol_short!("all"), 20);
+        assert_eq!(records.len(), 15, "one record per payload");
+        let newest = records.get(0).unwrap().id;
+        let oldest = records.get(14).unwrap().id;
+        assert_eq!(newest - oldest, 14, "ids stay consecutive across the batch");
+        assert_eq!(records.get(0).unwrap().payload, payload);
+    });
+
+    assert!(
+        cost <= 475_000,
+        "burst cost {cost} above ceiling 475000 (baseline 605759)"
+    );
+}
+
+/// An unregistered type fails before anything is written or published: no
+/// record, no counter bump, no event.
+#[test]
+fn unknown_event_type_emits_nothing() {
+    let (env, contract) = setup();
+    init_framework(&env, &contract);
+    let caller = Address::generate(&env);
+    let payload = BytesN::from_array(&env, &[7u8; 256]);
+
+    let (_, events) = run(&env, &contract, "emit_standard_event_unknown_type", || {
+        assert!(event_framework::emit_standard_event(
+            &env,
+            &caller,
+            symbol_short!("nope"),
+            payload.clone(),
+        )
+        .is_err());
+    });
+    assert_eq!(events, 0, "a rejected emission must not publish");
+}
+
+/// Counters written by the previous persistent layout are carried over the
+/// first time they are read, so record indices — and the ids already handed
+/// out — do not restart at zero.
+#[test]
+fn legacy_persistent_counters_are_migrated_not_reset() {
+    let (env, contract) = setup();
+    let admin = Address::generate(&env);
+    let caller = Address::generate(&env);
+    let payload = BytesN::from_array(&env, &[7u8; 256]);
+
+    // State as the old layout left it: 7 records, 3 of them in this ledger.
+    let timestamp = env.as_contract(&contract, || {
+        let ts = env.ledger().timestamp();
+        env.storage()
+            .persistent()
+            .set(&symbol_short!("ev_idx"), &7u64);
+        env.storage()
+            .persistent()
+            .set(&(symbol_short!("ev_tsq"), ts), &3u64);
+        ts
+    });
+    env.as_contract(&contract, || {
+        event_framework::init_event_framework(&env, &admin)
+    });
+
+    let id = env
+        .as_contract(&contract, || {
+            event_framework::emit_standard_event(
+                &env,
+                &caller,
+                symbol_short!("system"),
+                payload.clone(),
+            )
+            .ok()
+        })
+        .expect("emit");
+    assert_eq!(
+        id,
+        timestamp.saturating_mul(1_000_000).saturating_add(4),
+        "the 8th record continues the legacy sequence instead of restarting"
+    );
+
+    env.as_contract(&contract, || {
+        let records = event_framework::query_recent_events(&env, &symbol_short!("all"), 20);
+        assert_eq!(records.len(), 1, "the record lands at index 8, not index 1");
+        assert!(
+            !env.storage().persistent().has(&symbol_short!("ev_idx")),
+            "the superseded counter entry is dropped, not left paying rent"
+        );
+    });
 }

@@ -2,7 +2,9 @@
 
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, Address, Env, String};
-use stellar_nebula_nomad::dao::{self, DaoConfig, DaoError, Proposal, ProposalStatus, VoteDirection};
+use stellar_nebula_nomad::dao::{
+    self, DaoConfig, DaoError, Proposal, ProposalStatus, VoteDirection,
+};
 
 fn setup_env() -> (Env, Address) {
     let env = Env::default();
@@ -46,10 +48,10 @@ fn test_initialize_dao() {
         admin.clone(),
         staking,
         governance,
-        1000,  // 10% quorum
-        100,   // 100 ledger voting period
-        50,    // 50 ledger timelock
-        500_000,  // 500k proposal threshold
+        1000,    // 10% quorum
+        100,     // 100 ledger voting period
+        50,      // 50 ledger timelock
+        500_000, // 500k proposal threshold
     );
     assert!(result.is_ok());
 
@@ -130,12 +132,7 @@ fn test_vote_on_proposal() {
     let proposal_id = dao::create_proposal(env.clone(), proposer, description).unwrap();
 
     // Vote For.
-    let result = dao::vote(
-        env.clone(),
-        voter.clone(),
-        proposal_id,
-        VoteDirection::For,
-    );
+    let result = dao::vote(env.clone(), voter.clone(), proposal_id, VoteDirection::For);
     assert!(result.is_ok());
 
     // Verify vote was recorded.
@@ -174,21 +171,10 @@ fn test_double_vote_rejected() {
     let proposal_id = dao::create_proposal(env.clone(), proposer, description).unwrap();
 
     // First vote succeeds.
-    dao::vote(
-        env.clone(),
-        voter.clone(),
-        proposal_id,
-        VoteDirection::For,
-    )
-    .unwrap();
+    dao::vote(env.clone(), voter.clone(), proposal_id, VoteDirection::For).unwrap();
 
     // Second vote should fail.
-    let result = dao::vote(
-        env.clone(),
-        voter,
-        proposal_id,
-        VoteDirection::Against,
-    );
+    let result = dao::vote(env.clone(), voter, proposal_id, VoteDirection::Against);
     assert_eq!(result, Err(DaoError::AlreadyVoted));
 
     // Verify tally wasn't double-counted.
@@ -208,7 +194,7 @@ fn test_vote_after_voting_window_rejected() {
         staking,
         governance,
         1000,
-        100,  // Voting period
+        100, // Voting period
         50,
         500_000,
     )
@@ -224,12 +210,7 @@ fn test_vote_after_voting_window_rejected() {
     advance_ledger(&env, 101);
 
     // Try to vote. Should fail.
-    let result = dao::vote(
-        env.clone(),
-        voter,
-        proposal_id,
-        VoteDirection::For,
-    );
+    let result = dao::vote(env.clone(), voter, proposal_id, VoteDirection::For);
     assert_eq!(result, Err(DaoError::VotingNotActive));
 }
 
@@ -274,8 +255,8 @@ fn test_execute_proposal_after_timelock() {
         staking.clone(),
         governance,
         1000,
-        100,  // Voting period
-        50,   // Timelock
+        100, // Voting period
+        50,  // Timelock
         500_000,
     )
     .unwrap();
@@ -287,13 +268,7 @@ fn test_execute_proposal_after_timelock() {
     let proposal_id = dao::create_proposal(env.clone(), proposer, description).unwrap();
 
     // Vote (simulate sufficient power).
-    dao::vote(
-        env.clone(),
-        voter,
-        proposal_id,
-        VoteDirection::For,
-    )
-    .unwrap();
+    dao::vote(env.clone(), voter, proposal_id, VoteDirection::For).unwrap();
 
     // Advance past voting window + timelock (100 + 50 + 1 ledgers).
     advance_ledger(&env, 151);
@@ -319,8 +294,8 @@ fn test_execute_proposal_before_timelock_rejected() {
         staking,
         governance,
         1000,
-        100,  // Voting period
-        50,   // Timelock
+        100, // Voting period
+        50,  // Timelock
         500_000,
     )
     .unwrap();
@@ -347,8 +322,8 @@ fn test_execute_proposal_quorum_not_met() {
         staking,
         governance,
         1000,
-        100,  // Voting period
-        50,   // Timelock
+        100, // Voting period
+        50,  // Timelock
         500_000,
     )
     .unwrap();

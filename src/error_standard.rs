@@ -36,8 +36,7 @@ pub trait StandardContractError {
 mod tests {
     use super::{ErrorKind, StandardContractError};
     use crate::{
-        access_control::AccessControlError, analytics::AnalyticsError,
-        batch_processor::BatchError,
+        access_control::AccessControlError, analytics::AnalyticsError, batch_processor::BatchError,
     };
 
     #[test]

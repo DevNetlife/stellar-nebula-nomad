@@ -2,8 +2,8 @@
 //!
 use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Vec};
 
-use crate::rate_limiter;
 use crate::error_standard::{ErrorDescriptor, ErrorKind, StandardContractError};
+use crate::rate_limiter;
 
 /// Maximum number of operations per batch.
 ///

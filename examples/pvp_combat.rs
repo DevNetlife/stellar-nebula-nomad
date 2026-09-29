@@ -37,7 +37,11 @@ fn main() {
         "Combat #{combat_id} started: HP {} vs {}, first turn: {}",
         combat.player1_hp,
         combat.player2_hp,
-        if combat.turn == orion { "Orion" } else { "Vega" }
+        if combat.turn == orion {
+            "Orion"
+        } else {
+            "Vega"
+        }
     );
 
     // ── Step 3: Take turns ───────────────────────────────────────────────
@@ -49,7 +53,11 @@ fn main() {
             break;
         }
         let actor = state.turn.clone();
-        let energy = if actor == state.player1 { state.player1_energy } else { state.player2_energy };
+        let energy = if actor == state.player1 {
+            state.player1_energy
+        } else {
+            state.player2_energy
+        };
 
         // Simple strategy: attack when there's enough energy, else defend.
         let (mv, power) = if energy >= 15 {

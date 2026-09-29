@@ -9,11 +9,11 @@ pub const MIN_ORACLE_SOURCES: u32 = 1;
 #[contracttype]
 pub enum OracleKey {
     Admin,
-    ResourcePrice(Symbol),      // resource -> PriceData
-    PriceHistory(Symbol),       // resource -> Vec<PriceData> (last 24h)
-    OracleSources,              // -> Vec<Address>
-    EventTriggers,              // -> Vec<EventTrigger>
-    PriceFeed(Symbol),          // resource -> Vec<i128> (Chainlink feed data)
+    ResourcePrice(Symbol), // resource -> PriceData
+    PriceHistory(Symbol),  // resource -> Vec<PriceData> (last 24h)
+    OracleSources,         // -> Vec<Address>
+    EventTriggers,         // -> Vec<EventTrigger>
+    PriceFeed(Symbol),     // resource -> Vec<i128> (Chainlink feed data)
 }
 
 #[contracterror]
@@ -73,21 +73,27 @@ pub struct EventTrigger {
 }
 
 /// Initialize the market oracle with admin and default sources
-pub fn initialize_oracle(env: &Env, admin: Address, sources: Vec<Address>) -> Result<(), OracleError> {
+pub fn initialize_oracle(
+    env: &Env,
+    admin: Address,
+    sources: Vec<Address>,
+) -> Result<(), OracleError> {
     admin.require_auth();
-    
+
     if sources.is_empty() {
         return Err(OracleError::NoOracleSources);
     }
-    
+
     env.storage().instance().set(&OracleKey::Admin, &admin);
-    env.storage().persistent().set(&OracleKey::OracleSources, &sources);
-    
+    env.storage()
+        .persistent()
+        .set(&OracleKey::OracleSources, &sources);
+
     env.events().publish(
         (symbol_short!("oracle"), symbol_short!("init")),
         (admin, sources.len()),
     );
-    
+
     Ok(())
 }
 
@@ -99,21 +105,21 @@ pub fn update_resource_price(
     new_price: i128,
 ) -> Result<PriceData, OracleError> {
     admin.require_auth();
-    
+
     let stored_admin: Address = env
         .storage()
         .instance()
         .get(&OracleKey::Admin)
         .ok_or(OracleError::Unauthorized)?;
-    
+
     if admin != stored_admin {
         return Err(OracleError::Unauthorized);
     }
-    
+
     if new_price < 0 {
         return Err(OracleError::InvalidPrice);
     }
-    
+
     let current_time = env.ledger().timestamp();
     let price_data = PriceData {
         resource: resource.clone(),
@@ -121,35 +127,35 @@ pub fn update_resource_price(
         timestamp: current_time,
         source_count: 1,
     };
-    
+
     // Store current price
     env.storage()
         .persistent()
         .set(&OracleKey::ResourcePrice(resource.clone()), &price_data);
-    
+
     // Update 24h history
     let mut history = env
         .storage()
         .persistent()
         .get::<OracleKey, Vec<PriceData>>(&OracleKey::PriceHistory(resource.clone()))
         .unwrap_or(Vec::new(env));
-    
+
     history.push_back(price_data.clone());
-    
+
     // Keep only last 24 entries (hourly updates)
     if history.len() > 24 {
         history.pop_front();
     }
-    
+
     env.storage()
         .persistent()
         .set(&OracleKey::PriceHistory(resource.clone()), &history);
-    
+
     env.events().publish(
         (symbol_short!("oracle"), symbol_short!("price")),
         (resource, new_price, current_time),
     );
-    
+
     Ok(price_data)
 }
 
@@ -161,25 +167,25 @@ pub fn batch_update_prices(
     prices: Vec<i128>,
 ) -> Result<Vec<PriceData>, OracleError> {
     admin.require_auth();
-    
+
     if resources.len() != prices.len() {
         return Err(OracleError::InvalidPrice);
     }
-    
+
     if resources.len() > MAX_BATCH_UPDATE.try_into().unwrap() {
         return Err(OracleError::TooManyUpdates);
     }
-    
+
     let mut results = Vec::new(env);
-    
+
     for i in 0..resources.len() {
         let resource = resources.get(i).unwrap();
         let price = prices.get(i).unwrap();
-        
+
         let price_data = update_resource_price(env, admin.clone(), resource, price)?;
         results.push_back(price_data);
     }
-    
+
     Ok(results)
 }
 
@@ -190,14 +196,14 @@ pub fn get_current_market_rate(env: &Env, resource: Symbol) -> Result<i128, Orac
         .persistent()
         .get::<OracleKey, PriceData>(&OracleKey::ResourcePrice(resource.clone()))
         .ok_or(OracleError::ResourceNotFound)?;
-    
+
     let current_time = env.ledger().timestamp();
     let age = current_time.saturating_sub(price_data.timestamp);
-    
+
     if age > MAX_PRICE_AGE_SECS {
         return Err(OracleError::StalePrice);
     }
-    
+
     Ok(price_data.price)
 }
 
@@ -218,31 +224,35 @@ pub fn get_price_history(env: &Env, resource: Symbol) -> Vec<PriceData> {
 }
 
 /// Add oracle source (admin only)
-pub fn add_oracle_source(env: &Env, admin: Address, new_source: Address) -> Result<(), OracleError> {
+pub fn add_oracle_source(
+    env: &Env,
+    admin: Address,
+    new_source: Address,
+) -> Result<(), OracleError> {
     admin.require_auth();
-    
+
     let stored_admin: Address = env
         .storage()
         .instance()
         .get(&OracleKey::Admin)
         .ok_or(OracleError::Unauthorized)?;
-    
+
     if admin != stored_admin {
         return Err(OracleError::Unauthorized);
     }
-    
+
     let mut sources = env
         .storage()
         .persistent()
         .get::<OracleKey, Vec<Address>>(&OracleKey::OracleSources)
         .unwrap_or(Vec::new(env));
-    
+
     sources.push_back(new_source.clone());
-    
+
     env.storage()
         .persistent()
         .set(&OracleKey::OracleSources, &sources);
-    
+
     env.events().publish(
         (symbol_short!("oracle"), symbol_short!("source")),
         (new_source,),

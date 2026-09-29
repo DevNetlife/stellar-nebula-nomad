@@ -236,8 +236,8 @@ pub fn list_at_market(
         return Err(DynamicListError::InvalidPrice);
     }
 
-    let result = harvest_and_list(env, player, ship_id, layout, resource, price)
-        .map_err(|err| {
+    let result =
+        harvest_and_list(env, player, ship_id, layout, resource, price).map_err(|err| {
             env.events().publish(
                 (symbol_short!("dlist"), symbol_short!("failed")),
                 (resource.clone(), err as u32),
@@ -247,4 +247,3 @@ pub fn list_at_market(
 
     Ok((result.0, result.1, price))
 }
-

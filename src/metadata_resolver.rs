@@ -170,10 +170,7 @@ pub fn update_pin_status(
 /// Get the number of nodes currently replicating a pinned CID.
 pub fn get_pin_count(env: &Env, cid: &Bytes) -> u32 {
     let count_key = MetadataKey::PinCount(cid.clone());
-    env.storage()
-        .instance()
-        .get(&count_key)
-        .unwrap_or(0u32)
+    env.storage().instance().get(&count_key).unwrap_or(0u32)
 }
 
 /// Trigger an automatic pin request after metadata is set.
@@ -484,7 +481,10 @@ mod tests {
 
     #[test]
     fn default_budget_affords_max_batch() {
-        assert_eq!(max_batch_for_budget(DEFAULT_METADATA_GAS_BUDGET), MAX_METADATA_BATCH);
+        assert_eq!(
+            max_batch_for_budget(DEFAULT_METADATA_GAS_BUDGET),
+            MAX_METADATA_BATCH
+        );
         assert_eq!(
             estimate_batch_gas(MAX_METADATA_BATCH),
             DEFAULT_METADATA_GAS_BUDGET

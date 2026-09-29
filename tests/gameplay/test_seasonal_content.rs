@@ -1,6 +1,10 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::{Address as _, Ledger}, Address, BytesN, Env, String, symbol_short};
+use soroban_sdk::{
+    symbol_short,
+    testutils::{Address as _, Ledger},
+    Address, BytesN, Env, String,
+};
 use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient, GRID_SIZE};
 
 #[test]

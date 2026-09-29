@@ -5,7 +5,9 @@
 use proptest::prelude::*;
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, Address, Env};
-use stellar_nebula_nomad::{LimitOrder, NebulaNomadContract, NebulaNomadContractClient, OrderSide, TradingError};
+use stellar_nebula_nomad::{
+    LimitOrder, NebulaNomadContract, NebulaNomadContractClient, OrderSide, TradingError,
+};
 
 fn setup() -> (Env, NebulaNomadContractClient<'static>, Address) {
     let env = Env::default();

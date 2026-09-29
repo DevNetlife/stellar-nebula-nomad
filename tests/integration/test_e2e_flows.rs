@@ -2,11 +2,10 @@
 
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, vec, Address, BytesN, Env, IntoVal, Vec};
-use stellar_nebula_nomad::{
-    NebulaNomadContract, NebulaNomadContractClient, ProfileError, ShipError, GRID_SIZE,
-    TOTAL_CELLS,
-};
 use stellar_nebula_nomad::resource_minter::{ResourceMinter, ResourceMinterClient};
+use stellar_nebula_nomad::{
+    NebulaNomadContract, NebulaNomadContractClient, ProfileError, ShipError, GRID_SIZE, TOTAL_CELLS,
+};
 
 fn setup_env() -> (Env, NebulaNomadContractClient<'static>, Address) {
     let env = Env::default();

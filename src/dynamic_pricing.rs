@@ -260,8 +260,7 @@ pub fn deviation_bps(sma: i128, raw: i128) -> u32 {
 fn ewma_bps(prev: u32, sample: u32, alpha_bps: u32) -> u32 {
     let prev_i = prev as i64;
     let delta = sample as i64 - prev_i;
-    let mut next =
-        prev_i + (delta.saturating_mul(alpha_bps as i64) / BPS_DENOMINATOR as i64);
+    let mut next = prev_i + (delta.saturating_mul(alpha_bps as i64) / BPS_DENOMINATOR as i64);
     if next == prev_i && delta != 0 {
         next = prev_i + if delta > 0 { 1 } else { -1 };
     }
@@ -284,7 +283,9 @@ fn clamp_to_band(anchor: i128, value: i128, band_bps: u32) -> i128 {
 
 /// Widen the band from `base` toward `max` in proportion to realized volatility.
 fn effective_band(config: &PricingConfig, volatility_bps: u32) -> u32 {
-    let base = config.base_volatility_band_bps.min(config.max_volatility_band_bps);
+    let base = config
+        .base_volatility_band_bps
+        .min(config.max_volatility_band_bps);
     let headroom = config.max_volatility_band_bps.saturating_sub(base);
     if headroom == 0 {
         return base;
@@ -296,7 +297,8 @@ fn effective_band(config: &PricingConfig, volatility_bps: u32) -> u32 {
         (volatility_bps.min(config.max_deviation_bps) as u64 * headroom as u64)
             / config.max_deviation_bps as u64
     } as u32;
-    base.saturating_add(scale).min(config.max_volatility_band_bps)
+    base.saturating_add(scale)
+        .min(config.max_volatility_band_bps)
 }
 
 // ── Configuration ─────────────────────────────────────────────────────────────
@@ -312,7 +314,9 @@ pub fn init_pricing_config(
     }
     admin.require_auth();
     validate_config(&config)?;
-    env.storage().instance().set(&PricingKey::PricingAdmin, admin);
+    env.storage()
+        .instance()
+        .set(&PricingKey::PricingAdmin, admin);
     env.storage()
         .instance()
         .set(&PricingKey::PricingConfig, &config);
@@ -449,13 +453,17 @@ pub fn observe_price(
     let published = price_from_state(&config, &state).published;
 
     env.storage().persistent().set(&key, &state);
-    push_history(env, &resource, PricePoint {
-        sma: state.sma,
-        raw: raw_price,
-        published,
-        volatility_bps: state.volatility_bps,
-        timestamp: now,
-    });
+    push_history(
+        env,
+        &resource,
+        PricePoint {
+            sma: state.sma,
+            raw: raw_price,
+            published,
+            volatility_bps: state.volatility_bps,
+            timestamp: now,
+        },
+    );
 
     env.events().publish(
         (symbol_short!("pricing"), symbol_short!("observed")),
@@ -502,9 +510,7 @@ pub fn observe_supply_demand(
     } else {
         1_000
     };
-    let raw_bps = ratio
-        .saturating_sub(1_000)
-        .saturating_mul(10);
+    let raw_bps = ratio.saturating_sub(1_000).saturating_mul(10);
     let clamped = raw_bps.clamp(
         -(config.supply_demand_adj_bps as i128),
         config.supply_demand_adj_bps as i128,
@@ -661,8 +667,12 @@ mod tests {
     /// frame, which lets each test drive the function under test directly.
     fn seed_admin(env: &Env, id: &Address, admin: &Address, config: PricingConfig) {
         in_contract(env, id, || {
-            env.storage().instance().set(&PricingKey::PricingAdmin, admin);
-            env.storage().instance().set(&PricingKey::PricingConfig, &config);
+            env.storage()
+                .instance()
+                .set(&PricingKey::PricingAdmin, admin);
+            env.storage()
+                .instance()
+                .set(&PricingKey::PricingConfig, &config);
         });
     }
 
@@ -1014,9 +1024,11 @@ mod tests {
         for _ in 0..3 {
             tick(&env, DEFAULT_MIN_COOLDOWN_SECS);
             in_contract(&env, &id, || {
-                assert!(observe_price(&env, &admin, resource.clone(), 100_000)
-                    .unwrap()
-                    .rejected_last);
+                assert!(
+                    observe_price(&env, &admin, resource.clone(), 100_000)
+                        .unwrap()
+                        .rejected_last
+                );
             });
         }
         in_contract(&env, &id, || {
@@ -1090,7 +1102,11 @@ mod tests {
             // ...but the average only crept to 102, and the published price
             // stays within 3% of it — nowhere near the 110 print.
             assert_eq!(price.sma, 102);
-            assert!(price.published <= 105, "published {} escaped the band", price.published);
+            assert!(
+                price.published <= 105,
+                "published {} escaped the band",
+                price.published
+            );
             assert!(price.published >= 99);
         });
     }
@@ -1114,8 +1130,7 @@ mod tests {
         seed_state(&env, &id, &resource, 100);
         in_contract(&env, &id, || {
             // ratio 3000 => +20000bps raw, clamped to +2500.
-            let bps =
-                observe_supply_demand(&env, &admin, resource.clone(), 3_000, 1_000).unwrap();
+            let bps = observe_supply_demand(&env, &admin, resource.clone(), 3_000, 1_000).unwrap();
             assert_eq!(bps, 2_500);
         });
         in_contract(&env, &id, || {
@@ -1168,8 +1183,7 @@ mod tests {
         seeded(&env, &id, &admin, &resource, 100);
         in_contract(&env, &id, || {
             // ratio 2000 => undersupply => +10000bps raw, clamped to +2500.
-            let bps =
-                observe_supply_demand(&env, &admin, resource.clone(), 2_000, 1_000).unwrap();
+            let bps = observe_supply_demand(&env, &admin, resource.clone(), 2_000, 1_000).unwrap();
             assert_eq!(bps, 2_500);
         });
         in_contract(&env, &id, || {
@@ -1186,8 +1200,7 @@ mod tests {
         seeded(&env, &id, &admin, &resource, 100);
         in_contract(&env, &id, || {
             // ratio 500 => oversupply => -5000bps raw, clamped to -2500.
-            let bps =
-                observe_supply_demand(&env, &admin, resource.clone(), 500, 1_000).unwrap();
+            let bps = observe_supply_demand(&env, &admin, resource.clone(), 500, 1_000).unwrap();
             assert_eq!(bps, -2_500);
         });
         in_contract(&env, &id, || {
@@ -1201,12 +1214,14 @@ mod tests {
         let (env, id, admin, resource) = setup();
         seeded(&env, &id, &admin, &resource, 100);
         in_contract(&env, &id, || {
-            let bps =
-                observe_supply_demand(&env, &admin, resource.clone(), 1_000, 1_000).unwrap();
+            let bps = observe_supply_demand(&env, &admin, resource.clone(), 1_000, 1_000).unwrap();
             assert_eq!(bps, 0);
         });
         in_contract(&env, &id, || {
-            assert_eq!(dynamic_price(&env, resource.clone()).unwrap().published, 100);
+            assert_eq!(
+                dynamic_price(&env, resource.clone()).unwrap().published,
+                100
+            );
         });
     }
 
@@ -1215,8 +1230,7 @@ mod tests {
         let (env, id, admin, resource) = setup();
         seeded(&env, &id, &admin, &resource, 100);
         in_contract(&env, &id, || {
-            let bps =
-                observe_supply_demand(&env, &admin, resource.clone(), 5_000, 0).unwrap();
+            let bps = observe_supply_demand(&env, &admin, resource.clone(), 5_000, 0).unwrap();
             assert_eq!(bps, 0);
         });
     }
@@ -1251,7 +1265,10 @@ mod tests {
                 get_price_state(&env, unseen.clone()),
                 Err(PricingError::ResourceNotFound)
             );
-            assert_eq!(get_sma(&env, unseen.clone()), Err(PricingError::ResourceNotFound));
+            assert_eq!(
+                get_sma(&env, unseen.clone()),
+                Err(PricingError::ResourceNotFound)
+            );
             assert_eq!(
                 dynamic_price(&env, unseen.clone()),
                 Err(PricingError::ResourceNotFound)
@@ -1305,8 +1322,7 @@ mod tests {
         tick(&env, DEFAULT_MIN_COOLDOWN_SECS);
         in_contract(&env, &id, || {
             // ratio 1800 => +8000bps raw, clamped to +2500.
-            let bps =
-                observe_supply_demand(&env, &admin, resource.clone(), 1_800, 1_000).unwrap();
+            let bps = observe_supply_demand(&env, &admin, resource.clone(), 1_800, 1_000).unwrap();
             assert_eq!(bps, 2_500);
         });
         in_contract(&env, &id, || {
@@ -1322,4 +1338,3 @@ mod tests {
         });
     }
 }
-

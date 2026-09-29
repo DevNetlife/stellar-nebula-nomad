@@ -70,11 +70,7 @@ pub struct ChannelAttribution {
 /// Record a revenue event of `amount` attributed to `channel` (e.g.
 /// `symbol_short!("organic")`, `symbol_short!("referral")`,
 /// `symbol_short!("ad_camp")`).
-pub fn record_revenue(
-    env: &Env,
-    channel: Symbol,
-    amount: u64,
-) -> Result<(), AttributionError> {
+pub fn record_revenue(env: &Env, channel: Symbol, amount: u64) -> Result<(), AttributionError> {
     if amount == 0 {
         return Err(AttributionError::ZeroAmount);
     }

@@ -1,7 +1,7 @@
 //! On-chain gameplay metrics aggregation and queries.
 //!
-use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Vec};
 use crate::error_standard::{ErrorDescriptor, ErrorKind, StandardContractError};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Vec};
 
 // ── Error ─────────────────────────────────────────────────────────────────────
 

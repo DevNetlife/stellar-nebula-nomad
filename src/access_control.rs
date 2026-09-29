@@ -72,8 +72,8 @@
 //!    - Calls the appropriate RBAC function (e.g., `grant_role_internal`).
 //! 3. Leave `propose_role_change` as a stub or integrate with DAO's public interface.
 
-use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbol, Vec};
 use crate::error_standard::{ErrorDescriptor, ErrorKind, StandardContractError};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbol, Vec};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ERRORS
@@ -140,9 +140,8 @@ impl StandardContractError for AccessControlError {
                 (ErrorKind::Conflict, false)
             }
             BatchLimitExceeded => (ErrorKind::ResourceLimit, false),
-            InvalidExpiry | ProposalExpired | InvalidSignerConfig | InvalidRoleHierarchy | InvalidDelegation => {
-                (ErrorKind::Validation, false)
-            }
+            InvalidExpiry | ProposalExpired | InvalidSignerConfig | InvalidRoleHierarchy
+            | InvalidDelegation => (ErrorKind::Validation, false),
             TimelockNotElapsed => (ErrorKind::Conflict, true),
             InitializationFailed | NotImplemented => (ErrorKind::Internal, false),
         };
@@ -253,7 +252,7 @@ pub struct Proposal {
     pub proposer: Address,
     pub operation: ProposalOperation,
     pub created_at: u64,
-    pub execution_time: u64,  // When it can be executed (after timelock)
+    pub execution_time: u64, // When it can be executed (after timelock)
     pub executed: bool,
     pub approval_count: u32,
 }
@@ -307,7 +306,9 @@ fn get_admin(env: &Env) -> Option<Address> {
 
 /// Set the admin address (used only during initialization and transfer).
 fn set_admin(env: &Env, admin: &Address) {
-    env.storage().persistent().set(&AccessControlKey::Admin, admin);
+    env.storage()
+        .persistent()
+        .set(&AccessControlKey::Admin, admin);
 }
 
 /// Fetch a role membership record for (role, address).
@@ -319,9 +320,10 @@ fn get_role_record(env: &Env, role: &Symbol, address: &Address) -> Option<RoleRe
 
 /// Write a role membership record for (role, address).
 fn set_role_record(env: &Env, role: &Symbol, address: &Address, record: &RoleRecord) {
-    env.storage()
-        .persistent()
-        .set(&AccessControlKey::RoleMember(role.clone(), address.clone()), record);
+    env.storage().persistent().set(
+        &AccessControlKey::RoleMember(role.clone(), address.clone()),
+        record,
+    );
 }
 
 /// Delete a role membership record (used in revocation).
@@ -335,22 +337,29 @@ fn delete_role_record(env: &Env, role: &Symbol, address: &Address) {
 fn get_permission(env: &Env, role: &Symbol, action: &Symbol) -> bool {
     env.storage()
         .persistent()
-        .get(&AccessControlKey::RolePermission(role.clone(), action.clone()))
+        .get(&AccessControlKey::RolePermission(
+            role.clone(),
+            action.clone(),
+        ))
         .unwrap_or(false)
 }
 
 /// Set a permission record (role can perform action).
 fn set_permission(env: &Env, role: &Symbol, action: &Symbol) {
-    env.storage()
-        .persistent()
-        .set(&AccessControlKey::RolePermission(role.clone(), action.clone()), &true);
+    env.storage().persistent().set(
+        &AccessControlKey::RolePermission(role.clone(), action.clone()),
+        &true,
+    );
 }
 
 /// Delete a permission record (revoke action from role).
 fn delete_permission(env: &Env, role: &Symbol, action: &Symbol) {
     env.storage()
         .persistent()
-        .remove(&AccessControlKey::RolePermission(role.clone(), action.clone()));
+        .remove(&AccessControlKey::RolePermission(
+            role.clone(),
+            action.clone(),
+        ));
 }
 
 /// Fetch the list of known role names.
@@ -393,7 +402,10 @@ fn get_delegation_record(
 ) -> Option<DelegatedRoleRecord> {
     env.storage()
         .persistent()
-        .get(&AccessControlKey::RoleDelegation(role.clone(), delegatee.clone()))
+        .get(&AccessControlKey::RoleDelegation(
+            role.clone(),
+            delegatee.clone(),
+        ))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -986,9 +998,10 @@ pub fn create_proposal(
         .set(&AccessControlKey::Proposal(proposal_id), &proposal);
 
     // Record proposer's approval
-    env.storage()
-        .persistent()
-        .set(&AccessControlKey::ProposalApproval(proposal_id, proposer.clone()), &true);
+    env.storage().persistent().set(
+        &AccessControlKey::ProposalApproval(proposal_id, proposer.clone()),
+        &true,
+    );
 
     env.events().publish(
         (symbol_short!("multisig"), symbol_short!("propose")),
@@ -1055,7 +1068,10 @@ pub fn approve_proposal(
     let already_approved: bool = env
         .storage()
         .persistent()
-        .get(&AccessControlKey::ProposalApproval(proposal_id, approver.clone()))
+        .get(&AccessControlKey::ProposalApproval(
+            proposal_id,
+            approver.clone(),
+        ))
         .unwrap_or(false);
 
     if already_approved {
@@ -1063,9 +1079,10 @@ pub fn approve_proposal(
     }
 
     // Record approval
-    env.storage()
-        .persistent()
-        .set(&AccessControlKey::ProposalApproval(proposal_id, approver.clone()), &true);
+    env.storage().persistent().set(
+        &AccessControlKey::ProposalApproval(proposal_id, approver.clone()),
+        &true,
+    );
 
     proposal.approval_count += 1;
 
@@ -1242,10 +1259,8 @@ pub fn set_emergency_mode(
         .persistent()
         .set(&AccessControlKey::EmergencyMode, &enabled);
 
-    env.events().publish(
-        (symbol_short!("rbac"), symbol_short!("emrg_mode")),
-        enabled,
-    );
+    env.events()
+        .publish((symbol_short!("rbac"), symbol_short!("emrg_mode")), enabled);
     Ok(())
 }
 
@@ -1309,9 +1324,10 @@ pub fn delegate_role(
         active: true,
     };
 
-    env.storage()
-        .persistent()
-        .set(&AccessControlKey::RoleDelegation(role.clone(), delegatee.clone()), &record);
+    env.storage().persistent().set(
+        &AccessControlKey::RoleDelegation(role.clone(), delegatee.clone()),
+        &record,
+    );
 
     env.events().publish(
         (symbol_short!("rbac"), symbol_short!("delegate")),
@@ -1330,7 +1346,10 @@ pub fn revoke_delegation(
     delegator.require_auth();
     env.storage()
         .persistent()
-        .remove(&AccessControlKey::RoleDelegation(role.clone(), delegatee.clone()));
+        .remove(&AccessControlKey::RoleDelegation(
+            role.clone(),
+            delegatee.clone(),
+        ));
 
     env.events().publish(
         (symbol_short!("rbac"), symbol_short!("rev_del")),
@@ -1510,11 +1529,7 @@ mod tests {
     fn test_has_permission_returns_false_for_undefined_permission() {
         let (env, admin) = setup_env();
         init_roles(&env, admin).unwrap();
-        assert!(!has_permission(
-            &env,
-            &nomad_role(),
-            &symbol_short!("scan")
-        ));
+        assert!(!has_permission(&env, &nomad_role(), &symbol_short!("scan")));
     }
 
     #[test]
@@ -1522,11 +1537,7 @@ mod tests {
         let (env, admin) = setup_env();
         init_roles(&env, admin.clone()).unwrap();
         grant_permission(&env, admin, nomad_role(), symbol_short!("scan")).unwrap();
-        assert!(has_permission(
-            &env,
-            &nomad_role(),
-            &symbol_short!("scan")
-        ));
+        assert!(has_permission(&env, &nomad_role(), &symbol_short!("scan")));
     }
 
     #[test]
@@ -1677,7 +1688,14 @@ mod tests {
         let action = symbol_short!("scan");
         let expiry = env.ledger().sequence() + 5;
 
-        grant_role(&env, admin.clone(), nomad_role(), player.clone(), Some(expiry)).unwrap();
+        grant_role(
+            &env,
+            admin.clone(),
+            nomad_role(),
+            player.clone(),
+            Some(expiry),
+        )
+        .unwrap();
         grant_permission(&env, admin, nomad_role(), action.clone()).unwrap();
 
         advance_ledger(&env, 5);
@@ -1768,11 +1786,30 @@ mod tests {
         let captain_role = symbol_short!("captain");
         let pilot_address = Address::generate(&env);
 
-        grant_permission(&env, admin.clone(), officer_role.clone(), symbol_short!("steer")).unwrap();
+        grant_permission(
+            &env,
+            admin.clone(),
+            officer_role.clone(),
+            symbol_short!("steer"),
+        )
+        .unwrap();
         // captain inherits from officer
-        set_role_parent(&env, admin.clone(), captain_role.clone(), officer_role.clone()).unwrap();
+        set_role_parent(
+            &env,
+            admin.clone(),
+            captain_role.clone(),
+            officer_role.clone(),
+        )
+        .unwrap();
 
-        grant_role(&env, admin.clone(), captain_role.clone(), pilot_address.clone(), None).unwrap();
+        grant_role(
+            &env,
+            admin.clone(),
+            captain_role.clone(),
+            pilot_address.clone(),
+            None,
+        )
+        .unwrap();
 
         // pilot has captain role, which inherits "steer" from officer
         assert!(has_permission(&env, &captain_role, &symbol_short!("steer")));
@@ -1798,7 +1835,14 @@ mod tests {
         let emergency_responder = Address::generate(&env);
         let responder_role = symbol_short!("responder");
 
-        grant_role(&env, admin.clone(), responder_role.clone(), emergency_responder.clone(), None).unwrap();
+        grant_role(
+            &env,
+            admin.clone(),
+            responder_role.clone(),
+            emergency_responder.clone(),
+            None,
+        )
+        .unwrap();
         set_emergency_role(&env, admin.clone(), responder_role.clone(), true).unwrap();
 
         // Outside emergency mode, responder cannot execute unguarded actions
@@ -1828,7 +1872,14 @@ mod tests {
         grant_role(&env, admin, role.clone(), delegator.clone(), None).unwrap();
 
         let expiry_seq = env.ledger().sequence() + 10;
-        delegate_role(&env, delegator.clone(), delegatee.clone(), role.clone(), expiry_seq).unwrap();
+        delegate_role(
+            &env,
+            delegator.clone(),
+            delegatee.clone(),
+            role.clone(),
+            expiry_seq,
+        )
+        .unwrap();
 
         assert!(has_role(&env, &role, &delegatee));
 

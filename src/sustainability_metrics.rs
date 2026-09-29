@@ -77,7 +77,12 @@ pub fn record_transaction_footprint(
 
     env.events().publish(
         (symbol_short!("sust"), symbol_short!("footprnt")),
-        (player.clone(), record.gas_used, record.co2_emissions, record.tx_count),
+        (
+            player.clone(),
+            record.gas_used,
+            record.co2_emissions,
+            record.tx_count,
+        ),
     );
 
     Ok(record)

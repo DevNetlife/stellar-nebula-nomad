@@ -2,10 +2,8 @@
 
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, Address, Bytes, BytesN, Env};
-use stellar_nebula_nomad::{
-    NebulaNomadContract, NebulaNomadContractClient, TOTAL_CELLS,
-};
 use stellar_nebula_nomad::resource_minter::{balance_of, credit_balance, ResourceType};
+use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient, TOTAL_CELLS};
 
 fn setup_env() -> (Env, NebulaNomadContractClient<'static>, Address) {
     let env = Env::default();

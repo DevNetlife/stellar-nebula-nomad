@@ -8,11 +8,13 @@
 //     at the top of mint_resource() before any state mutation.
 //   • RateLimitHit events are emitted inside check_rate_limit.
 
+use crate::economics::anti_whale::{process_anti_whale_action, AntiWhaleError};
 use crate::nebula_explorer::{CellType, NebulaLayout};
 use crate::nebula_gen::{NebulaError as NebulaGenError, NebulaGen};
 use crate::rate_limiter::{check_rate_limit, Operation, RateLimitError};
-use crate::economics::anti_whale::{process_anti_whale_action, AntiWhaleError};
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec,
+};
 
 pub type AssetId = ResourceType;
 
@@ -188,8 +190,7 @@ impl ResourceMinterContract {
         })?;
 
         // ── Anti-Whale check (Issue #455) ─────────────────────
-        let (effective_amount, _progressive_fee) =
-            process_anti_whale_action(env, &caller, amount)?;
+        let (effective_amount, _progressive_fee) = process_anti_whale_action(env, &caller, amount)?;
 
         // ── Update balances (checked: Issue #239) ──────────────
         let balance_key = MinterKey::Balance(caller.clone(), resource_type.clone());
@@ -754,14 +755,7 @@ mod tests {
         let env = make_env();
         let caller = Address::generate(&env);
         let result = in_contract(&env, || {
-            ResourceMinterContract::mint_resource(
-                &env,
-                caller,
-                1,
-                0,
-                ResourceType::StellarDust,
-                0,
-            )
+            ResourceMinterContract::mint_resource(&env, caller, 1, 0, ResourceType::StellarDust, 0)
         });
         assert_eq!(result, Err(MinterError::InvalidAmount));
     }

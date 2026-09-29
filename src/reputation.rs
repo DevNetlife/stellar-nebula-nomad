@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, contracterror, symbol_short, Address, Env, String, Vec};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, String, Vec};
 
 pub const MIN_REPUTATION: u32 = 1;
 pub const MAX_REPUTATION: u32 = 100;
@@ -121,10 +121,8 @@ pub fn initialize_reputation(env: &Env, admin: &Address) -> Result<(), Reputatio
         .persistent()
         .set(&ReputationKey::AdminList, &admins);
 
-    env.events().publish(
-        (symbol_short!("rep"), symbol_short!("init")),
-        admin.clone(),
-    );
+    env.events()
+        .publish((symbol_short!("rep"), symbol_short!("init")), admin.clone());
 
     Ok(())
 }
@@ -169,7 +167,10 @@ pub fn get_reputation_score(env: &Env, player: &Address) -> Result<u32, Reputati
     Ok(score.score)
 }
 
-pub fn get_reputation_details(env: &Env, player: &Address) -> Result<ReputationScore, ReputationError> {
+pub fn get_reputation_details(
+    env: &Env,
+    player: &Address,
+) -> Result<ReputationScore, ReputationError> {
     env.storage()
         .persistent()
         .get(&ReputationKey::Score(player.clone()))
@@ -199,7 +200,9 @@ pub fn record_behavior(
     let new_score = if points > 0 {
         ((score.score as i32) + points).max(MIN_REPUTATION as i32) as u32
     } else {
-        ((score.score as i32) + points).min(MAX_REPUTATION as i32).max(MIN_REPUTATION as i32) as u32
+        ((score.score as i32) + points)
+            .min(MAX_REPUTATION as i32)
+            .max(MIN_REPUTATION as i32) as u32
     };
 
     if new_score > MAX_REPUTATION || new_score < MIN_REPUTATION {
@@ -402,10 +405,8 @@ pub fn ban_player(env: &Env, admin: &Address, player: &Address) -> Result<(), Re
         .persistent()
         .set(&ReputationKey::Score(player.clone()), &score);
 
-    env.events().publish(
-        (symbol_short!("rep"), symbol_short!("ban")),
-        player.clone(),
-    );
+    env.events()
+        .publish((symbol_short!("rep"), symbol_short!("ban")), player.clone());
 
     Ok(())
 }

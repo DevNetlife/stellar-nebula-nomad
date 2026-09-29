@@ -1,6 +1,9 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::{Address as _, Ledger}, Address, BytesN, Env, Vec};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    Address, BytesN, Env, Vec,
+};
 use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient};
 
 // ─── Prize Distributor Tests (Issue #62) ─────────────────────────────────────

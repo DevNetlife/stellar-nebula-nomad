@@ -1,5 +1,4 @@
-use soroban_sdk::{contracttype, contracterror, symbol_short, Address, Env, Vec};
-
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Vec};
 
 /// Maximum number of stat updates allowed in a single batch transaction.
 pub const MAX_BATCH_SIZE: u32 = 5;
