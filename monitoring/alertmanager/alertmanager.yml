@@ -1,6 +1,10 @@
 global:
   resolve_timeout: 5m
   slack_api_url: '${SLACK_WEBHOOK_URL}'
+  smtp_smarthost: '${SMTP_SMARTHOST}'
+  smtp_from: '${ALERTS_FROM_EMAIL}'
+  smtp_auth_username: '${SMTP_USERNAME}'
+  smtp_auth_password: '${SMTP_PASSWORD}'
 
 route:
   group_by: ['alertname', 'severity']
@@ -31,6 +35,9 @@ receivers:
       - channel: '#nebula-critical'
         title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
         text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+    email_configs:
+      - to: '${ONCALL_EMAIL}'
         send_resolved: true
 
   - name: 'warning-alerts'

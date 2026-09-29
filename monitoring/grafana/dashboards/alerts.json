@@ -1,0 +1,26 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": { "list": [] },
+  "description": "Active and recent alerts across all severities (issue #516)",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 }, "id": 1, "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }, "title": "Firing Alerts", "type": "stat", "targets": [{ "expr": "count(ALERTS{alertstate=\"firing\"})", "legendFormat": "Firing", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 8, "x": 8, "y": 0 }, "id": 2, "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }, "title": "Critical", "type": "stat", "targets": [{ "expr": "count(ALERTS{alertstate=\"firing\", severity=\"critical\"})", "legendFormat": "Critical", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 }, "id": 3, "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }, "title": "Warning", "type": "stat", "targets": [{ "expr": "count(ALERTS{alertstate=\"firing\", severity=\"warning\"})", "legendFormat": "Warning", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 10, "w": 24, "x": 0, "y": 4 }, "id": 4, "options": {}, "title": "Alerts table", "type": "table", "targets": [{ "expr": "ALERTS{alertstate=\"firing\"}", "format": "table", "instant": true, "refId": "A" }] }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["nebula-nomad", "alerts"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "utc",
+  "title": "Alerts",
+  "uid": "nebula-alerts",
+  "version": 1
+}
