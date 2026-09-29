@@ -13,8 +13,9 @@ use crate::nebula_explorer::{CellType, NebulaLayout};
 use crate::nebula_gen::{NebulaError as NebulaGenError, NebulaGen};
 use crate::rate_limiter::{check_rate_limit, Operation, RateLimitError};
 use crate::reentrancy_guard::{with_guard, ReentrancyError};
-use crate::economics::anti_whale::{process_anti_whale_action, AntiWhaleError};
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec,
+};
 
 pub type AssetId = ResourceType;
 

@@ -119,6 +119,15 @@ mod tests {
     use super::*;
     use soroban_sdk::testutils::Address as _;
 
+    /// Topic `index` of the first event published in `env`, as a symbol.
+    fn first_event_topic(env: &Env, index: usize) -> soroban_sdk::Symbol {
+        let all = env.events().all();
+        let event = all.events().first().expect("expected at least one event");
+        let soroban_sdk::xdr::ContractEventBody::V0(body) = &event.body;
+        let topic = soroban_sdk::Val::try_from_val(env, &body.topics[index]).unwrap();
+        soroban_sdk::Symbol::try_from_val(env, &topic).unwrap()
+    }
+
     // ── Account info ──────────────────────────────────────────────────────────
 
     #[test]
@@ -137,6 +146,13 @@ mod tests {
         let address = Address::generate(&env);
         query_account_info(&env, &address);
 
+        assert_eq!(
+            first_event_topic(&env, 0),
+            soroban_sdk::symbol_short!("horizon")
+        );
+        assert_eq!(
+            first_event_topic(&env, 1),
+            soroban_sdk::symbol_short!("query")
         let topics =
             crate::test_helpers::event_topics(&env, 0).expect("expected at least one event");
         assert_eq!(
@@ -169,6 +185,7 @@ mod tests {
         let operation = String::from_str(&env, "mint_ship");
         submit_transaction(&env, tx_hash, operation);
 
+        assert_eq!(first_event_topic(&env, 1), soroban_sdk::symbol_short!("tx"));
         let topics = crate::test_helpers::event_topics(&env, 0).unwrap();
         assert_eq!(topics.get(1).map(std::string::String::as_str), Some("tx"));
     }
@@ -180,6 +197,7 @@ mod tests {
         let operation = String::from_str(&env, "scan_nebula");
         // Should not panic — legacy wrapper.
         emit_tx_for_indexing(&env, tx_hash, operation);
+        assert!(!env.events().all().events().is_empty());
         assert!(crate::test_helpers::event_count(&env) > 0);
     }
 
@@ -196,6 +214,7 @@ mod tests {
             String::from_str(&env, "tx2"),
             String::from_str(&env, "op2"),
         );
+        assert_eq!(env.events().all().events().len(), 2);
         assert_eq!(crate::test_helpers::event_count(&env), 2);
     }
 
@@ -211,6 +230,9 @@ mod tests {
         };
         stream_events(&env, &subscriber, filter);
 
+        assert_eq!(
+            first_event_topic(&env, 1),
+            soroban_sdk::symbol_short!("stream")
         let topics = crate::test_helpers::event_topics(&env, 0).unwrap();
         assert_eq!(
             topics.get(1).map(std::string::String::as_str),
@@ -227,6 +249,7 @@ mod tests {
             sub_topic: String::from_str(&env, ""),
         };
         stream_events(&env, &subscriber, filter);
+        assert!(!env.events().all().events().is_empty());
         assert!(crate::test_helpers::event_count(&env) > 0);
     }
 
@@ -236,6 +259,9 @@ mod tests {
         let subscriber = Address::generate(&env);
         unsubscribe_stream(&env, &subscriber);
 
+        assert_eq!(
+            first_event_topic(&env, 1),
+            soroban_sdk::symbol_short!("unsub")
         let topics = crate::test_helpers::event_topics(&env, 0).unwrap();
         assert_eq!(
             topics.get(1).map(std::string::String::as_str),
@@ -253,6 +279,7 @@ mod tests {
         };
         stream_events(&env, &subscriber, filter);
         unsubscribe_stream(&env, &subscriber);
+        assert_eq!(env.events().all().events().len(), 2);
         assert_eq!(crate::test_helpers::event_count(&env), 2);
     }
 
@@ -283,6 +310,7 @@ mod tests {
         stream_events(&env, &address, filter);
 
         // All three operations each emit one event.
+        assert_eq!(env.events().all().events().len(), 3);
         assert_eq!(crate::test_helpers::event_count(&env), 3);
     }
 }
