@@ -1,6 +1,6 @@
 //! Bounded batch execution for contract operations.
 //!
-use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Vec};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbol, Vec};
 
 use crate::rate_limiter;
 use crate::error_standard::{ErrorDescriptor, ErrorKind, StandardContractError};

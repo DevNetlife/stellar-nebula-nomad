@@ -202,7 +202,7 @@ pub fn is_cache_valid(env: &Env, namespace: Symbol, key: Symbol) -> bool {
     let cached: Option<CachedData> = env
         .storage()
         .persistent()
-        .get(&CacheKey::CacheEntry(namespace, key));
+        .get(&CacheKey::CacheEntry(namespace.clone(), key.clone()));
 
     match cached {
         None => false,
