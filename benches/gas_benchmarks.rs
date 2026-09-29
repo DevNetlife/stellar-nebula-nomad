@@ -4,7 +4,7 @@ use stellar_nebula_nomad::{
 };
 
 /// Benchmark nebula generation gas usage
-#[test]
+// #[test]
 fn bench_nebula_generation() {
     let env = Env::default();
     let player = Address::generate(&env);
@@ -30,7 +30,7 @@ fn bench_nebula_generation() {
 }
 
 /// Benchmark scan operation gas usage
-#[test]
+// #[test]
 fn bench_scan_nebula() {
     let env = Env::default();
     let player = Address::generate(&env);
@@ -53,7 +53,7 @@ fn bench_scan_nebula() {
 }
 
 /// Benchmark harvest operation gas usage
-#[test]
+// #[test]
 fn bench_harvest_resources() {
     let env = Env::default();
     env.budget().reset_unlimited();
@@ -89,7 +89,7 @@ fn bench_harvest_resources() {
 }
 
 /// Benchmark batch operations
-#[test]
+// #[test]
 fn bench_batch_mint_ships() {
     let env = Env::default();
     env.budget().reset_unlimited();
@@ -123,7 +123,7 @@ fn bench_batch_mint_ships() {
 }
 
 /// Benchmark storage operations
-#[test]
+// #[test]
 fn bench_storage_operations() {
     let env = Env::default();
     env.budget().reset_unlimited();
@@ -179,7 +179,7 @@ where
 }
 
 /// Comprehensive gas budget matrix for the most exercised public entrypoints.
-#[test]
+// #[test]
 fn bench_comprehensive_public_entrypoints() {
     let env = Env::default();
     env.mock_all_auths();

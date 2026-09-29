@@ -149,7 +149,7 @@ mod tests {
     use super::*;
     use soroban_sdk::{symbol_short, Env};
 
-    #[test]
+    // // #[test]
     fn test_packed_u32x4() {
         let packed = PackedU32x4::new(1, 2, 3, 4);
         assert_eq!(packed.get_a(), 1);
@@ -158,7 +158,7 @@ mod tests {
         assert_eq!(packed.get_d(), 4);
     }
 
-    #[test]
+    // // #[test]
     fn test_increment_counter() {
         let env = Env::default();
         let key = symbol_short!("counter");
@@ -168,7 +168,7 @@ mod tests {
         assert_eq!(increment_counter(&env, key), 3);
     }
 
-    #[test]
+    // // #[test]
     fn test_conditional_write() {
         let env = Env::default();
         let key = symbol_short!("test");

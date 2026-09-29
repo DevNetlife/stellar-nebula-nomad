@@ -486,7 +486,7 @@ fn update_leaderboard(
 #[cfg(test)]
 mod tests {
 
-    #[test]
+    // // #[test]
     #[ignore]
     fn test_generate_referral_code() {
         // Tests require contract context

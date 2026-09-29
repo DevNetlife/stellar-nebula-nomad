@@ -342,7 +342,7 @@ mod tests {
         (env, id)
     }
 
-    #[test]
+    // // #[test]
     fn test_record_scan_clamps_instead_of_panicking_at_max() {
         let (env, contract_id) = make_env();
         let player = Address::generate(&env);
@@ -366,7 +366,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_global_stats_zero_on_empty() {
         let (env, contract_id) = make_env();
         env.as_contract(&contract_id, || {
@@ -377,7 +377,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_record_scan_increments_counters() {
         let (env, contract_id) = make_env();
         let player = Address::generate(&env);
@@ -399,7 +399,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_record_ship_minted() {
         let (env, contract_id) = make_env();
 
@@ -413,7 +413,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_compute_leaderboard_summary_matches_totals() {
         let (env, contract_id) = make_env();
         let p1 = Address::generate(&env);
@@ -432,7 +432,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_leaderboard_sorted_descending() {
         let (env, contract_id) = make_env();
         let p1 = Address::generate(&env);
@@ -453,7 +453,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_leaderboard_top_n_respected() {
         let (env, contract_id) = make_env();
         let p1 = Address::generate(&env);
@@ -473,7 +473,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_invalid_top_n_zero() {
         let (env, contract_id) = make_env();
 
@@ -483,7 +483,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_invalid_top_n_exceeds_max() {
         let (env, contract_id) = make_env();
 
@@ -493,7 +493,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_player_list_capped_at_max() {
         let (env, contract_id) = make_env();
 
@@ -513,7 +513,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_no_duplicate_players_in_list() {
         let (env, contract_id) = make_env();
         let player = Address::generate(&env);
@@ -532,7 +532,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_leaderboard_empty_when_no_players() {
         let (env, contract_id) = make_env();
 

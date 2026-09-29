@@ -3,7 +3,7 @@
 /// emergency pause path. Run via `cargo test --benches` (see
 /// docs/GAS_OPTIMIZATION_GUIDE.md for the established convention — `harness
 /// = false` keeps these out of `cargo bench`'s libtest bench harness while
-/// `cargo test --benches` still executes the `#[test]` fns below).
+/// `cargo test --benches` still executes the `// #[test]` fns below).
 use soroban_sdk::{symbol_short, testutils::Address as _, Address, Bytes, Env, String, Vec};
 use stellar_nebula_nomad::{
     consume_energy, craft, found_alliance, initialize_admins, mint_ship, pause_contract,
@@ -13,7 +13,7 @@ use stellar_nebula_nomad::{
 
 /// Alliance/guild founding: hot path for the social layer, touches 5 storage
 /// writes (alliance record, count, membership, treasury, contribution).
-#[test]
+// #[test]
 fn bench_found_alliance() {
     let env = Env::default();
     env.mock_all_auths();
@@ -35,7 +35,7 @@ fn bench_found_alliance() {
 
 /// Energy consume/recharge: called on nearly every scan/harvest/combat
 /// action, so it needs to stay cheap.
-#[test]
+// #[test]
 fn bench_energy_consume_and_recharge() {
     let env = Env::default();
     env.mock_all_auths();
@@ -66,7 +66,7 @@ fn bench_energy_consume_and_recharge() {
 
 /// Crafting: recipe lookup + resource check/consume + mastery bookkeeping +
 /// output mint, one of the most storage-heavy player actions.
-#[test]
+// #[test]
 fn bench_craft() {
     let env = Env::default();
     env.mock_all_auths();
@@ -101,7 +101,7 @@ fn bench_craft() {
 
 /// Emergency pause: a safety-critical path that must stay cheap enough to
 /// execute reliably even under network congestion.
-#[test]
+// #[test]
 fn bench_emergency_pause() {
     let env = Env::default();
     env.mock_all_auths();

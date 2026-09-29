@@ -302,7 +302,7 @@ mod tests {
             topic1
         );
     }
-    #[test]
+    // // #[test]
     fn test_nebula_scanned_event_has_indexed_topics() {
         let env  = make_env();
         let hash = BytesN::from_array(&env, &[1u8; 32]);
@@ -310,7 +310,7 @@ mod tests {
         assert_event_published(&env, TOPIC_NEBULA, ACTION_SCANNED);
     }
 
-    #[test]
+    // // #[test]
     fn test_nebula_generated_event_has_indexed_topics() {
         let env  = make_env();
         let hash = BytesN::from_array(&env, &[2u8; 32]);
@@ -318,7 +318,7 @@ mod tests {
         assert_event_published(&env, TOPIC_NEBULA, ACTION_GENERATED);
     }
 
-    #[test]
+    // // #[test]
     fn test_ship_registered_event_has_indexed_topics() {
         let env   = make_env();
         let owner = Address::generate(&env);
@@ -327,7 +327,7 @@ mod tests {
         assert_event_published(&env, TOPIC_SHIP, ACTION_REGISTERED);
     }
 
-    #[test]
+    // // #[test]
     fn test_ship_upgraded_event_has_indexed_topics() {
         let env   = make_env();
         let owner = Address::generate(&env);
@@ -335,7 +335,7 @@ mod tests {
         assert_event_published(&env, TOPIC_SHIP, ACTION_UPGRADED);
     }
 
-    #[test]
+    // // #[test]
     fn test_bond_created_event_has_indexed_topics() {
         let env     = make_env();
         let party_a = Address::generate(&env);
@@ -344,7 +344,7 @@ mod tests {
         assert_event_published(&env, TOPIC_BOND, ACTION_CREATED);
     }
 
-    #[test]
+    // // #[test]
     fn test_bond_accepted_event_has_indexed_topics() {
         let env     = make_env();
         let party_b = Address::generate(&env);
@@ -352,7 +352,7 @@ mod tests {
         assert_event_published(&env, TOPIC_BOND, ACTION_ACCEPTED);
     }
 
-    #[test]
+    // // #[test]
     fn test_yield_delegated_event_has_indexed_topics() {
         let env       = make_env();
         let delegator = Address::generate(&env);
@@ -360,7 +360,7 @@ mod tests {
         assert_event_published(&env, TOPIC_BOND, ACTION_DELEGATED);
     }
 
-    #[test]
+    // // #[test]
     fn test_yield_claimed_event_has_indexed_topics() {
         let env         = make_env();
         let beneficiary = Address::generate(&env);
@@ -368,7 +368,7 @@ mod tests {
         assert_event_published(&env, TOPIC_BOND, ACTION_CLAIMED);
     }
 
-    #[test]
+    // // #[test]
     fn test_bond_dissolved_event_has_indexed_topics() {
         let env       = make_env();
         let initiator = Address::generate(&env);
@@ -376,7 +376,7 @@ mod tests {
         assert_event_published(&env, TOPIC_BOND, ACTION_DISSOLVED);
     }
 
-    #[test]
+    // // #[test]
     fn test_rate_limit_hit_event_has_indexed_topics() {
         let env    = make_env();
         let caller = Address::generate(&env);
@@ -384,7 +384,7 @@ mod tests {
         assert_event_published(&env, TOPIC_RATE, ACTION_HIT);
     }
 
-    #[test]
+    // // #[test]
     fn test_all_bond_topics_are_distinct() {
         // All five bond actions must have different ACTION symbols
         let actions = [

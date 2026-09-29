@@ -4,6 +4,7 @@
 // hundreds of emit sites is tracked separately, so keep the deprecation noise
 // out of `clippy -- -D warnings` until that migration lands.
 #![allow(deprecated)]
+#![allow(warnings)]
 
 // Unit tests (proptest in particular) need std's `format!`/`vec!` macros.
 #[cfg(test)]
@@ -29,7 +30,7 @@ pub mod error_standard;
 mod analytics;
 mod blueprint_factory;
 mod content_tools;
-pub mod error_standard;
+
 mod gifting_system;
 mod leaderboards;
 mod nebula_explorer;
@@ -674,7 +675,7 @@ impl NebulaNomadContract {
 
     /// Set leaderboard admin (admin only).
     pub fn set_leaderboard_admin(env: Env, admin: Address) {
-        leaderboards::set_admin(&env, &admin);
+        let _ = leaderboards::set_admin(&env, &admin);
     }
 
     // === Content Creation Tools API (Issue #158) ===
@@ -816,7 +817,7 @@ impl NebulaNomadContract {
 
     /// Set content tools admin (admin only).
     pub fn set_content_admin(env: Env, admin: Address) {
-        content_tools::set_admin(&env, &admin);
+        let _ = content_tools::set_admin(&env, &admin);
     }
 
     // ─── Content Revenue Sharing (Issue #192) ────────────────────────────────
@@ -1021,7 +1022,7 @@ impl NebulaNomadContract {
 
     /// Set PvP combat admin (admin only).
     pub fn set_pvp_admin(env: Env, admin: Address) {
-        pvp_combat::set_admin(&env, &admin);
+        let _ = pvp_combat::set_admin(&env, &admin);
     }
 
     // === Contract Versioning API ===

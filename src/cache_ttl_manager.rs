@@ -345,7 +345,7 @@ pub fn detect_stale_data(env: &Env, namespace: Symbol, key: Symbol) -> bool {
 }
 
 /// Get cache statistics (for monitoring).
-pub fn get_cache_stats(_env: &Env, namespace: Symbol) -> (u32, u32) {
+pub fn get_cache_stats(_env: &Env, _namespace: Symbol) -> (u32, u32) {
     // Returns (total_entries, stale_entries).
     // In a real implementation, this would iterate and count.
     // For now, return placeholder values.
