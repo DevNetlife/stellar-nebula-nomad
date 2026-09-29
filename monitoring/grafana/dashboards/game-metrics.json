@@ -1,0 +1,27 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": { "list": [] },
+  "description": "Game metrics — players, scans, and upgrades (issue #516)",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 }, "id": 1, "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }, "title": "Daily Active Players", "type": "stat", "targets": [{ "expr": "nebula_active_players", "legendFormat": "DAU", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 8, "x": 8, "y": 0 }, "id": 2, "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }, "title": "Scans / min", "type": "stat", "targets": [{ "expr": "rate(nebula_scans_total[1m]) * 60", "legendFormat": "Scans/min", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 }, "id": 3, "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }, "title": "Upgrades / hr", "type": "stat", "targets": [{ "expr": "rate(nebula_upgrades_total[1h]) * 3600", "legendFormat": "Upgrades/hr", "refId": "A" }] },
+    { "datasource": "Prometheus", "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] }, "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 }, "id": 4, "options": { "tooltip": { "mode": "multi" } }, "title": "Active players over time", "type": "timeseries", "targets": [{ "expr": "nebula_active_players", "legendFormat": "Players", "refId": "A" }] },
+    { "datasource": "Prometheus", "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] }, "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 }, "id": 5, "options": { "tooltip": { "mode": "multi" } }, "title": "Scans + upgrades over time", "type": "timeseries", "targets": [{ "expr": "rate(nebula_scans_total[5m])", "legendFormat": "Scans", "refId": "A" }, { "expr": "rate(nebula_upgrades_total[5m])", "legendFormat": "Upgrades", "refId": "B" }] }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["nebula-nomad", "game-metrics"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timezone": "utc",
+  "title": "Game Metrics",
+  "uid": "nebula-game-metrics",
+  "version": 1
+}
