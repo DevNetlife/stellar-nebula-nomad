@@ -1,8 +1,9 @@
 #![cfg(test)]
 
 use soroban_sdk::{
+    symbol_short,
     testutils::{Address as _, Ledger, LedgerInfo},
-    symbol_short, vec, Address, BytesN, Env, Symbol, Vec,
+    vec, Address, BytesN, Env, Symbol, Vec,
 };
 use stellar_nebula_nomad::{
     NebulaNomadContract, NebulaNomadContractClient, OptimResult, OptimizedEntry, ShipNebulaData,

@@ -17,11 +17,11 @@ use soroban_sdk::{
     testutils::{Address as _, Ledger, LedgerInfo},
     Address, BytesN, Env, Symbol, Vec,
 };
+use stellar_nebula_nomad::nebula_gen::{NebulaGen, NebulaGenClient};
 use stellar_nebula_nomad::{
     get_optimized_entries, get_optimized_entry, initialize_bump_config, reset_burst_counter,
     store_with_bump, Anomaly, AnomalyType, CachedEntry, ResourceClass, StorageTier,
 };
-use stellar_nebula_nomad::nebula_gen::{NebulaGen, NebulaGenClient};
 
 // ─── Legacy nebula generator (pre-#438 hot path) ─────────────────────────
 
@@ -111,7 +111,9 @@ impl LegacyNebulaGen {
         }
         let _hash = BytesN::from_array(&env, &arr);
 
-        env.storage().persistent().set(&LegacyKey::Layout(ship_id), &anomalies);
+        env.storage()
+            .persistent()
+            .set(&LegacyKey::Layout(ship_id), &anomalies);
         env.storage()
             .persistent()
             .extend_ttl(&LegacyKey::Layout(ship_id), 20, 20);

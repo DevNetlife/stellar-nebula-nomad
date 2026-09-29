@@ -1,6 +1,9 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::{Address as _, Ledger}, Address, BytesN, Env, Vec};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    Address, BytesN, Env, Vec,
+};
 use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient};
 
 // ─── Prize Distributor Tests (Issue #62) ─────────────────────────────────────
@@ -9,7 +12,7 @@ use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient};
 fn test_prize_fund_and_pool_balance() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -27,7 +30,7 @@ fn test_prize_fund_and_pool_balance() {
 fn test_prize_fund_invalid_amount_panics() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -41,7 +44,7 @@ fn test_prize_fund_invalid_amount_panics() {
 fn test_prize_weekly_cycle() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -76,7 +79,7 @@ fn test_prize_weekly_cycle() {
 fn test_prize_insufficient_pool_panics() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -96,7 +99,7 @@ fn test_prize_insufficient_pool_panics() {
 fn test_prize_no_snapshot_panics() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -114,7 +117,7 @@ fn test_prize_no_snapshot_panics() {
 fn test_portal_register_and_query() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -134,7 +137,7 @@ fn test_portal_register_and_query() {
 fn test_portal_decay_reduces_stability() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -154,7 +157,7 @@ fn test_portal_decay_reduces_stability() {
 fn test_portal_unstable_travel_panics() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -173,7 +176,7 @@ fn test_portal_unstable_travel_panics() {
 fn test_portal_refresh_restores_stability() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -196,7 +199,7 @@ fn test_portal_refresh_restores_stability() {
 fn test_portal_same_nebula_panics() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -217,7 +220,7 @@ fn make_star(env: &Env, val: u8) -> BytesN<32> {
 fn test_constellation_record_and_count() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let user = Address::generate(&env);
@@ -235,7 +238,7 @@ fn test_constellation_record_and_count() {
 fn test_constellation_too_few_stars_panics() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let user = Address::generate(&env);
@@ -252,7 +255,7 @@ fn test_constellation_too_few_stars_panics() {
 fn test_constellation_match_finds_best() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let user = Address::generate(&env);
@@ -287,7 +290,7 @@ fn test_constellation_match_finds_best() {
 fn test_constellation_no_match_panics() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     // No constellations recorded — match should error.
@@ -310,7 +313,7 @@ fn zero_message(env: &Env) -> BytesN<64> {
 fn test_entanglement_pair_creation() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let owner_a = Address::generate(&env);
@@ -323,7 +326,7 @@ fn test_entanglement_pair_creation() {
 fn test_entanglement_same_ship_panics() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let owner_a = Address::generate(&env);
@@ -337,7 +340,7 @@ fn test_entanglement_same_ship_panics() {
 fn test_entanglement_send_message() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let owner_a = Address::generate(&env);
@@ -357,7 +360,7 @@ fn test_entanglement_send_message() {
 fn test_entanglement_expired_pair_panics() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let owner_a = Address::generate(&env);
@@ -375,7 +378,7 @@ fn test_entanglement_expired_pair_panics() {
 fn test_entanglement_dissolve_stops_messages() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let owner_a = Address::generate(&env);
@@ -392,7 +395,7 @@ fn test_entanglement_dissolve_stops_messages() {
 fn test_entanglement_unauthorized_send_panics() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let owner_a = Address::generate(&env);

@@ -72,7 +72,12 @@ fn advance_time(env: &Env, seconds: u64) {
 /// | anything else   | Falls back to `"empty"`                     |
 fn generate_test_scenario(
     scenario_type: &str,
-) -> (Env, NebulaNomadContractClient<'static>, Address, Option<u64>) {
+) -> (
+    Env,
+    NebulaNomadContractClient<'static>,
+    Address,
+    Option<u64>,
+) {
     let (env, client, player) = make_env();
     let metadata = Bytes::from_array(&env, &[0u8; 4]);
     let mut ship_id: Option<u64> = None;
@@ -197,7 +202,11 @@ pub fn fuzz_contract_function(function_name: &str, iterations: u32) {
                     let ship = client.mint_ship(&player, &symbol_short!("explorer"), &metadata);
                     // client.deposit_treasure panics on contract error; success means vault created.
                     let vault = client.deposit_treasure(&player, &ship.id, &amount);
-                    prop_assert_eq!(vault.amount, amount, "vault.amount must match deposited amount");
+                    prop_assert_eq!(
+                        vault.amount,
+                        amount,
+                        "vault.amount must match deposited amount"
+                    );
                     prop_assert!(!vault.claimed, "new vault must not be claimed");
                     Ok(())
                 })
@@ -350,7 +359,10 @@ fn scenario_with_profile_has_profile() {
     let (_, client, player, _) = generate_test_scenario("with_profile");
     // A second call for the same owner must return ProfileAlreadyExists.
     let result = client.try_initialize_profile(&player);
-    assert!(matches!(result, Err(Ok(ProfileError::ProfileAlreadyExists))));
+    assert!(matches!(
+        result,
+        Err(Ok(ProfileError::ProfileAlreadyExists))
+    ));
 }
 
 /// "full" creates profile + ship + vault; ship count reflects all owned ships.
@@ -413,18 +425,18 @@ fn fuzz_vault_state_transitions() {
     let (env, client, player) = make_env();
     let metadata = Bytes::from_array(&env, &[0u8; 4]);
     let ship = client.mint_ship(&player, &symbol_short!("fighter"), &metadata);
-    
+
     // Deposit → StillLocked → Claimed
     let vault = client.deposit_treasure(&player, &ship.id, &1000u64);
     assert!(!vault.claimed);
-    
+
     let early_result = client.try_claim_treasure(&player, &vault.vault_id);
     assert!(matches!(early_result, Err(Ok(VaultError::StillLocked))));
-    
+
     advance_time(&env, DEFAULT_MIN_LOCK_DURATION + 1);
     let payout = client.claim_treasure(&player, &vault.vault_id);
     assert!(payout >= 1000);
-    
+
     let vault_after = client.get_vault(&vault.vault_id);
     assert!(vault_after.claimed);
 }
@@ -434,13 +446,13 @@ fn fuzz_ship_ownership_transfer() {
     let (env, client, player) = make_env();
     let new_owner = Address::generate(&env);
     let metadata = Bytes::from_array(&env, &[1u8; 4]);
-    
+
     let ship = client.mint_ship(&player, &symbol_short!("explorer"), &metadata);
     assert_eq!(ship.owner, player);
-    
+
     let transferred = client.transfer_ownership(&ship.id, &new_owner);
     assert_eq!(transferred.owner, new_owner);
-    
+
     let fetched = client.get_ship(&ship.id);
     assert_eq!(fetched.owner, new_owner);
 }
@@ -456,7 +468,7 @@ fn fuzz_invalid_ship_types() {
         symbol_short!("turret"),
         symbol_short!("carrier"),
     ];
-    
+
     for ship_type in &invalid_types {
         let (env, client, player) = make_env();
         let metadata = Bytes::from_array(&env, &[0u8; 4]);
@@ -473,7 +485,7 @@ fn fuzz_invalid_ship_types() {
 fn fuzz_boundary_difficulty_levels() {
     let (_, client, _) = make_env();
     let boundary_levels = [0u32, 1, 50, 99, 100, 101, u32::MAX];
-    
+
     for &level in &boundary_levels {
         let result = client.try_calculate_difficulty(&level);
         if level == 0 || level > 100 {
@@ -509,7 +521,10 @@ fn vault_claim_after_lock_succeeds() {
     let vault = client.deposit_treasure(&player, &sid, &1_000u64);
     advance_time(&env, DEFAULT_MIN_LOCK_DURATION + 1);
     let payout = client.claim_treasure(&player, &vault.vault_id);
-    assert!(payout >= 1_000, "payout must be at least the deposited amount");
+    assert!(
+        payout >= 1_000,
+        "payout must be at least the deposited amount"
+    );
 }
 
 // ─── Edge-case corpus tests ────────────────────────────────────────────────────
@@ -568,7 +583,9 @@ fn test_helpers_generate_scenario_accessible() {
     use stellar_nebula_nomad::test_helpers;
 
     let (_, client, ctx) = test_helpers::generate_test_scenario("with_ship");
-    let sid = ctx.ship_id.expect("ship_id must be set for with_ship scenario");
+    let sid = ctx
+        .ship_id
+        .expect("ship_id must be set for with_ship scenario");
     let ship = client.get_ship(&sid);
     assert_eq!(ship.owner, ctx.player);
     assert_eq!(ship.hull, 80); // explorer

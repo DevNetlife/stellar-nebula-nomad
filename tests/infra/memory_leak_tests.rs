@@ -36,7 +36,7 @@ fn test_no_memory_leak_in_vector_allocations() {
 fn test_heap_memory_profiling_bounds() {
     let env = Env::default();
     let initial_budget = env.budget();
-    
+
     let mut vec = Vec::new(&env);
     for i in 0..1000 {
         vec.push_back(i as u64);

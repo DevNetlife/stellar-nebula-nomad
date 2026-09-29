@@ -1,6 +1,4 @@
-use soroban_sdk::{
-    contracterror, contracttype, symbol_short, Address, BytesN, Env, Vec
-};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, BytesN, Env, Vec};
 /// Default refund percentage in basis points (100 = 1%).
 pub const DEFAULT_REFUND_BPS: u32 = 500; // 5%
 
@@ -86,7 +84,12 @@ pub fn initialize_refund(env: &Env, admin: &Address) {
 /// Set refund percentage (basis points). Admin-only.
 pub fn set_refund_percentage(env: &Env, admin: &Address, bps: u32) -> Result<(), RefundError> {
     ensure_auth!(admin);
-    if env.storage().instance().get::<RefundKey, Address>(&RefundKey::Admin) != Some(admin.clone()) {
+    if env
+        .storage()
+        .instance()
+        .get::<RefundKey, Address>(&RefundKey::Admin)
+        != Some(admin.clone())
+    {
         return Err(RefundError::NotAuthorized);
     }
     if bps > 10_000 {
@@ -163,7 +166,12 @@ pub fn process_refund_batch(
     tx_hashes: Vec<BytesN<32>>,
 ) -> Result<u64, RefundError> {
     ensure_auth!(admin);
-    if env.storage().instance().get::<RefundKey, Address>(&RefundKey::Admin) != Some(admin.clone()) {
+    if env
+        .storage()
+        .instance()
+        .get::<RefundKey, Address>(&RefundKey::Admin)
+        != Some(admin.clone())
+    {
         return Err(RefundError::NotAuthorized);
     }
     if (tx_hashes.len() as u32) > REFUND_BATCH_SIZE {
@@ -207,7 +215,5 @@ pub fn process_refund_batch(
 
 /// Get refund request by transaction hash.
 pub fn get_refund_request(env: &Env, tx_hash: BytesN<32>) -> Option<RefundRequest> {
-    env.storage()
-        .instance()
-        .get(&RefundKey::Refund(tx_hash))
+    env.storage().instance().get(&RefundKey::Refund(tx_hash))
 }

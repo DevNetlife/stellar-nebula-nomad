@@ -4,7 +4,7 @@
 
 use proptest::prelude::*;
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
-use soroban_sdk::{Address, Bytes, BytesN, Env, symbol_short};
+use soroban_sdk::{symbol_short, Address, Bytes, BytesN, Env};
 use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient};
 
 fn setup() -> (Env, NebulaNomadContractClient<'static>, Address) {
@@ -85,10 +85,10 @@ fn fuzz_zero_vault_deposit() {
 fn fuzz_nebula_layout_determinism() {
     let (env, client, player) = setup();
     let seed = BytesN::from_array(&env, &[42u8; 32]);
-    
+
     let layout1 = client.generate_nebula_layout(&seed, &player);
     let layout2 = client.generate_nebula_layout(&seed, &player);
-    
+
     assert_eq!(layout1.cells.len(), layout2.cells.len());
     assert_eq!(layout1.total_energy, layout2.total_energy);
 }
@@ -99,7 +99,7 @@ fn fuzz_rarity_calculation() {
     let seed = BytesN::from_array(&env, &[1u8; 32]);
     let layout = client.generate_nebula_layout(&seed, &player);
     let rarity = client.calculate_rarity_tier(&layout);
-    
+
     // Rarity should be one of the valid enum values
     // This test just ensures no panic occurs
     let _ = rarity;
@@ -109,12 +109,12 @@ fn fuzz_rarity_calculation() {
 fn fuzz_batch_ship_mint() {
     let (env, client, player) = setup();
     let metadata = Bytes::from_array(&env, &[0u8; 4]);
-    
+
     for _ in 0..5 {
         let result = client.try_mint_ship(&player, &symbol_short!("explorer"), &metadata);
         assert!(result.is_ok());
     }
-    
+
     let ships = client.get_ships_by_owner(&player);
     assert_eq!(ships.len(), 5);
 }

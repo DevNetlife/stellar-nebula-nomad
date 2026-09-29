@@ -2,9 +2,9 @@
 //!
 use soroban_sdk::{contracttype, symbol_short, Address, Env, String, Symbol};
 
+use crate::mission_generator::get_player_missions;
 use crate::player_profile::get_profile_by_owner;
 use crate::seasons::{get_current_season, SeasonTheme};
-use crate::mission_generator::{get_player_missions};
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -58,7 +58,7 @@ pub struct AiMissionResult {
     pub target_count: u32,
     pub reward: i128,
     pub narrative_tier: Symbol, // common, rare, epic, legend
-    pub archetype_tag: Symbol,   // rookie, veteran, explorer, harvester, trader, nomad
+    pub archetype_tag: Symbol,  // rookie, veteran, explorer, harvester, trader, nomad
 }
 
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ pub enum AiMissionKey {
 /// Analyze a player's on-chain stats to extract their behavior fingerprint.
 pub fn analyze_player_behavior(env: &Env, player: &Address) -> PlayerBehaviourProfile {
     let profile_res = get_profile_by_owner(env, player);
-    
+
     // 1. Gather raw stats (with defaults if profile doesn't exist yet)
     let (scans, essence) = match profile_res {
         Ok(p) => (p.total_scans, p.essence_earned),
@@ -146,10 +146,7 @@ pub fn analyze_player_behavior(env: &Env, player: &Address) -> PlayerBehaviourPr
 
 /// Calculate adaptive difficulty multiplier in basis points (100 bps = 1.0x).
 /// Scales difficulty from 1.0x to 5.0x (100 to 500 bps) based on skill and completion rates.
-pub fn calculate_adaptive_difficulty(
-    env: &Env,
-    profile: &PlayerBehaviourProfile,
-) -> u32 {
+pub fn calculate_adaptive_difficulty(env: &Env, profile: &PlayerBehaviourProfile) -> u32 {
     // Base difficulty scales from 100 bps to 400 bps based on skill rating capped at 10,000
     let skill_cap = 10_000u64;
     let base_diff = 100 + ((profile.skill_rating.min(skill_cap) * 300) / skill_cap) as u32;
@@ -192,7 +189,7 @@ pub fn calculate_adaptive_difficulty(
 /// Lookup a mission template by archetype index and index within archetype.
 pub fn get_mission_template(archetype: &PlayerArchetype, idx: u32) -> MissionTemplate {
     let t_id = (idx % 9) + 1; // 1 to 9 templates per archetype
-    
+
     match archetype {
         PlayerArchetype::Rookie => {
             match t_id {
@@ -278,11 +275,7 @@ pub fn get_mission_template(archetype: &PlayerArchetype, idx: u32) -> MissionTem
 // ─── AI Engine Entrypoint ───────────────────────────────────────────────────
 
 /// Perform AI analysis and generate a procedurally tailored mission for `player`.
-pub fn generate_ai_mission_internal(
-    env: &Env,
-    player: Address,
-    seed: u64,
-) -> AiMissionResult {
+pub fn generate_ai_mission_internal(env: &Env, player: Address, seed: u64) -> AiMissionResult {
     // 1. Run profile analysis
     let profile = analyze_player_behavior(env, &player);
 
@@ -309,7 +302,8 @@ pub fn generate_ai_mission_internal(
     // reward = BASE * target * (difficulty_bps / 100)
     let reward = BASE_AI_REWARD
         .saturating_mul(target_count as i128)
-        .saturating_mul(difficulty_bps as i128) / 100;
+        .saturating_mul(difficulty_bps as i128)
+        / 100;
 
     // 5. Narrative Tier tagging based on difficulty_bps
     let narrative_tier = if difficulty_bps >= 400 {

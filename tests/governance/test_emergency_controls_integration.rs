@@ -1,13 +1,14 @@
 #![cfg(test)]
 
 use soroban_sdk::{
+    symbol_short,
     testutils::{Address as _, Ledger, LedgerInfo},
-    symbol_short, vec, Address, BytesN, Env,
+    vec, Address, BytesN, Env,
 };
 use stellar_nebula_nomad::{
     emergency_controls::{
-        require_not_paused, EmergencyError, initialize_admins, pause_contract,
-        schedule_unpause, execute_unpause, is_paused, get_admins,
+        execute_unpause, get_admins, initialize_admins, is_paused, pause_contract,
+        require_not_paused, schedule_unpause, EmergencyError,
     },
     NebulaNomadContract, NebulaNomadContractClient, UNPAUSE_DELAY,
 };
@@ -25,7 +26,7 @@ fn setup_env() -> (Env, NebulaNomadContractClient<'static>, Address) {
         min_persistent_entry_ttl: 1000,
         max_entry_ttl: 10_000,
     });
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     let admin = Address::generate(&env);
     (env, client, admin)
@@ -137,7 +138,7 @@ fn test_multi_admin_pause_authorization() {
         max_entry_ttl: 10_000,
     });
 
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin1 = Address::generate(&env);

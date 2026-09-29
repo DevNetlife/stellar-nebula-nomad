@@ -32,7 +32,9 @@ pub fn validate_address(_env: &Env, auth: Address) -> Result<(), SharedError> {
 }
 
 pub fn calculate_yield(base: i128, multiplier: u32) -> Result<i128, SharedError> {
-    let candidate = base.checked_mul(multiplier as i128).ok_or(SharedError::MathOverflow)?;
+    let candidate = base
+        .checked_mul(multiplier as i128)
+        .ok_or(SharedError::MathOverflow)?;
     Ok(candidate)
 }
 

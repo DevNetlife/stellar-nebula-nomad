@@ -116,7 +116,6 @@ pub fn calculate_diminishing_returns(volume_before: u64, amount: u64) -> u64 {
         let effective_tier2 = (in_tier2 as u128 * TIER2_MULTIPLIER_BPS as u128 / 10_000) as u64;
         total_effective = total_effective.saturating_add(effective_tier2);
         remaining = remaining.saturating_sub(in_tier2);
-        current_vol = current_vol.saturating_add(in_tier2);
     }
 
     // Segment 3: Volume above Tier 2 (> TIER2_THRESHOLD)

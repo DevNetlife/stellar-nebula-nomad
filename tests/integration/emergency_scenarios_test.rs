@@ -49,7 +49,14 @@ fn test_emergency_pause_and_recovery_workflow_e2e() {
 
     // Step 3: Configure emergency responder role
     let emergency_role = symbol_short!("guardian");
-    grant_role(&env, admin.clone(), emergency_role.clone(), responder.clone(), None).unwrap();
+    grant_role(
+        &env,
+        admin.clone(),
+        emergency_role.clone(),
+        responder.clone(),
+        None,
+    )
+    .unwrap();
     set_emergency_role(&env, admin.clone(), emergency_role.clone(), true).unwrap();
 
     // Step 4: Toggle emergency mode on RBAC

@@ -90,11 +90,10 @@ pub fn generate_daily_mission(env: &Env, player: Address) -> Result<Mission, Mis
     } else {
         let mut count = 0;
         for i in 0..DAILY_MISSION_LIMIT {
-            if env
-                .storage()
-                .persistent()
-                .has(&MissionKey::PlayerMission(player.clone(), current_day + (i as u64)))
-            {
+            if env.storage().persistent().has(&MissionKey::PlayerMission(
+                player.clone(),
+                current_day + (i as u64),
+            )) {
                 count += 1;
             }
         }
@@ -109,7 +108,8 @@ pub fn generate_daily_mission(env: &Env, player: Address) -> Result<Mission, Mis
         .storage()
         .persistent()
         .get::<MissionKey, u64>(&MissionKey::MissionCounter)
-        .unwrap_or(0) + 1;
+        .unwrap_or(0)
+        + 1;
 
     env.storage()
         .persistent()
@@ -135,7 +135,7 @@ pub fn generate_daily_mission(env: &Env, player: Address) -> Result<Mission, Mis
     let target = ((seed % 10) + 5) as u32;
     let reward = MISSION_REWARD_BASE.saturating_mul(target as i128);
     let expires_at = env.ledger().timestamp() + 86400;
-    
+
     let mut prerequisites = Vec::new(env);
     if mission_counter > 1 {
         prerequisites.push_back(mission_counter - 1);
@@ -161,9 +161,10 @@ pub fn generate_daily_mission(env: &Env, player: Address) -> Result<Mission, Mis
     env.storage()
         .persistent()
         .set(&MissionKey::MissionData(mission_counter), &mission);
-    env.storage()
-        .persistent()
-        .set(&MissionKey::PlayerMission(player.clone(), mission_counter), &true);
+    env.storage().persistent().set(
+        &MissionKey::PlayerMission(player.clone(), mission_counter),
+        &true,
+    );
 
     env.events().publish(
         (symbol_short!("mission"), symbol_short!("generate")),
@@ -258,7 +259,7 @@ pub fn update_mission_progress(
 
 pub fn get_player_missions(env: &Env, player: Address) -> Vec<Mission> {
     let mut missions = Vec::new(env);
-    
+
     let mission_counter = env
         .storage()
         .persistent()
@@ -282,10 +283,18 @@ pub fn get_player_missions(env: &Env, player: Address) -> Vec<Mission> {
 
 pub fn start_mission(env: &Env, player: Address, mission_id: u64) -> Result<(), MissionError> {
     player.require_auth();
-    let mission = env.storage().persistent().get::<MissionKey, Mission>(&MissionKey::MissionData(mission_id)).ok_or(MissionError::InvalidMission)?;
-    
+    let mission = env
+        .storage()
+        .persistent()
+        .get::<MissionKey, Mission>(&MissionKey::MissionData(mission_id))
+        .ok_or(MissionError::InvalidMission)?;
+
     for prereq_id in mission.prerequisite_missions.iter() {
-        let prereq = env.storage().persistent().get::<MissionKey, Mission>(&MissionKey::MissionData(prereq_id)).ok_or(MissionError::InvalidMission)?;
+        let prereq = env
+            .storage()
+            .persistent()
+            .get::<MissionKey, Mission>(&MissionKey::MissionData(prereq_id))
+            .ok_or(MissionError::InvalidMission)?;
         if !prereq.completed {
             return Err(MissionError::NotCompleted);
         }
@@ -311,11 +320,10 @@ pub fn generate_ai_mission(env: &Env, player: Address) -> Result<Mission, Missio
     } else {
         let mut count = 0;
         for i in 0..DAILY_MISSION_LIMIT {
-            if env
-                .storage()
-                .persistent()
-                .has(&MissionKey::PlayerMission(player.clone(), current_day + (i as u64)))
-            {
+            if env.storage().persistent().has(&MissionKey::PlayerMission(
+                player.clone(),
+                current_day + (i as u64),
+            )) {
                 count += 1;
             }
         }
@@ -330,7 +338,8 @@ pub fn generate_ai_mission(env: &Env, player: Address) -> Result<Mission, Missio
         .storage()
         .persistent()
         .get::<MissionKey, u64>(&MissionKey::MissionCounter)
-        .unwrap_or(0) + 1;
+        .unwrap_or(0)
+        + 1;
 
     env.storage()
         .persistent()
@@ -342,10 +351,11 @@ pub fn generate_ai_mission(env: &Env, player: Address) -> Result<Mission, Missio
         .wrapping_add(env.ledger().timestamp());
 
     // Generate procedural adaptive mission via AI engine
-    let ai_result = crate::ai_mission_engine::generate_ai_mission_internal(env, player.clone(), seed);
+    let ai_result =
+        crate::ai_mission_engine::generate_ai_mission_internal(env, player.clone(), seed);
 
     let expires_at = env.ledger().timestamp() + 86400;
-    
+
     let mut prerequisites = Vec::new(env);
     if mission_counter > 1 {
         prerequisites.push_back(mission_counter - 1);
@@ -371,13 +381,19 @@ pub fn generate_ai_mission(env: &Env, player: Address) -> Result<Mission, Missio
     env.storage()
         .persistent()
         .set(&MissionKey::MissionData(mission_counter), &mission);
-    env.storage()
-        .persistent()
-        .set(&MissionKey::PlayerMission(player.clone(), mission_counter), &true);
+    env.storage().persistent().set(
+        &MissionKey::PlayerMission(player.clone(), mission_counter),
+        &true,
+    );
 
     env.events().publish(
         (symbol_short!("mission"), symbol_short!("ai_gen")),
-        (mission_counter, player, ai_result.mission_type, ai_result.narrative_tier),
+        (
+            mission_counter,
+            player,
+            ai_result.mission_type,
+            ai_result.narrative_tier,
+        ),
     );
 
     Ok(mission)

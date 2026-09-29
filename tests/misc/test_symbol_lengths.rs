@@ -26,7 +26,11 @@ fn visit(dir: &Path, out: &mut Vec<String>) {
                         if end > MAX_SHORT_SYMBOL {
                             out.push(format!(
                                 "{}:{}: `{}` is {} chars (max {})",
-                                path.display(), n + 1, &after[..end], end, MAX_SHORT_SYMBOL
+                                path.display(),
+                                n + 1,
+                                &after[..end],
+                                end,
+                                MAX_SHORT_SYMBOL
                             ));
                         }
                         rest = &after[end..];
@@ -43,12 +47,25 @@ fn visit(dir: &Path, out: &mut Vec<String>) {
 fn no_symbol_short_literal_exceeds_nine_chars() {
     let mut bad = Vec::new();
     visit(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"), &mut bad);
-    assert!(bad.is_empty(), "symbol_short! literals too long:\n{}", bad.join("\n"));
+    assert!(
+        bad.is_empty(),
+        "symbol_short! literals too long:\n{}",
+        bad.join("\n")
+    );
 }
 
 #[test]
 fn metrics_and_migration_symbols_are_short() {
-    for s in ["tx_ok", "tx_fail", "err_spike", "unhealthy", "high_gas", "incomp", "batch_ok", "rollback"] {
+    for s in [
+        "tx_ok",
+        "tx_fail",
+        "err_spike",
+        "unhealthy",
+        "high_gas",
+        "incomp",
+        "batch_ok",
+        "rollback",
+    ] {
         assert!(s.len() <= MAX_SHORT_SYMBOL, "{s}");
     }
 }

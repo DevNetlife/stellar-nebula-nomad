@@ -4,9 +4,7 @@ use proptest::prelude::*;
 use proptest::test_runner::{Config as ProptestConfig, TestRunner};
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{BytesN, Env};
-use stellar_nebula_nomad::{
-    NebulaNomadContract, NebulaNomadContractClient, TOTAL_CELLS,
-};
+use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient, TOTAL_CELLS};
 
 fn make_env() -> (Env, NebulaNomadContractClient<'static>) {
     let env = Env::default();

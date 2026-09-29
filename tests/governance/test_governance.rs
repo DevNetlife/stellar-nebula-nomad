@@ -43,12 +43,8 @@ fn test_set_game_parameter_by_non_dao_rejected() {
     let param_value = 5000;
 
     env.as_contract(&contract, || {
-        let result = governance::set_game_parameter(
-            env.clone(),
-            attacker.clone(),
-            param_key,
-            param_value,
-        );
+        let result =
+            governance::set_game_parameter(env.clone(), attacker.clone(), param_key, param_value);
         assert_eq!(result, Err(GovError::NotDao));
     });
 }

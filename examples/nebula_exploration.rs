@@ -54,7 +54,10 @@ fn main() {
     let (scanned, scanned_rarity) = client.scan_nebula(&seed, &player);
     println!();
     println!("scan_nebula:");
-    println!("  energy={} rarity={scanned_rarity:?}", scanned.total_energy);
+    println!(
+        "  energy={} rarity={scanned_rarity:?}",
+        scanned.total_energy
+    );
 
     // ── Step 7: Determinism ─────────────────────────────────────────────
     // Same seed + same ledger = same layout, so anyone can verify a scan.

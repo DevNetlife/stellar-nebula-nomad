@@ -239,15 +239,11 @@ pub fn get_cached_with_ttl(
                 .unwrap_or(false);
 
             if invalidated || !entry.is_valid || age > entry.ttl_seconds {
-                // Mark as stale and emit event.
+                // Mark as stale. The `Err` return below is the observable
+                // signal for expiry, so no event is emitted on a read path.
                 env.storage()
                     .instance()
                     .set(&CacheKey::IsStale(namespace.clone(), key.clone()), &true);
-
-                env.events().publish(
-                    (symbol_short!("cache"), symbol_short!("expired")),
-                    (namespace, key, current_time),
-                );
 
                 Err(CacheTtlError::CacheExpired)
             } else {
@@ -389,6 +385,7 @@ pub fn prune_expired_entries(env: &Env, namespace: Symbol, max_entries: u32) -> 
         }
         scanned += 1;
     }
+    let cleared = 0u32;
 
     let removed = pruned.len();
     let remaining = len - removed;
