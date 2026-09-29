@@ -2,8 +2,8 @@
 //!
 use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Symbol, Vec};
 
-use crate::rate_limiter;
 use crate::error_standard::{ErrorDescriptor, ErrorKind, StandardContractError};
+use crate::rate_limiter;
 
 /// Maximum number of operations per batch.
 ///
@@ -68,7 +68,7 @@ impl StandardContractError for BatchError {
 // ─── Data Types ───────────────────────────────────────────────────────────
 
 /// Types of operations that can be batched.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[contracttype]
 pub enum BatchOpType {
     /// Upgrade a ship's stats.
@@ -354,7 +354,7 @@ pub fn execute_batch_mint(
 
     for i in 0..mint_ops.len() {
         if let Some((_ship_id, _anomaly_idx, _resource_type, amount)) = mint_ops.get(i) {
-            total_minted = total_minted.saturating_add(*amount);
+            total_minted = total_minted.saturating_add(amount);
             succeeded += 1;
         } else {
             failed += 1;
@@ -423,7 +423,7 @@ pub fn execute_batch_trade(
 
     for i in 0..trades.len() {
         if let Some((_from, _to, amount)) = trades.get(i) {
-            total_value = total_value.saturating_add(*amount as u128);
+            total_value = total_value.saturating_add(u128::from(amount));
             succeeded += 1;
         } else {
             failed += 1;
