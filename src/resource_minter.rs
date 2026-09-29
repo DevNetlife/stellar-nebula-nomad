@@ -8,12 +8,14 @@
 //     at the top of mint_resource() before any state mutation.
 //   • RateLimitHit events are emitted inside check_rate_limit.
 
+use crate::economics::anti_whale::{process_anti_whale_action, AntiWhaleError};
 use crate::nebula_explorer::{CellType, NebulaLayout};
 use crate::nebula_gen::{NebulaError as NebulaGenError, NebulaGen};
 use crate::rate_limiter::{check_rate_limit, Operation, RateLimitError};
 use crate::reentrancy_guard::{with_guard, ReentrancyError};
-use crate::economics::anti_whale::{process_anti_whale_action, AntiWhaleError};
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec,
+};
 
 pub type AssetId = ResourceType;
 
@@ -541,6 +543,16 @@ pub enum HarvestError {
     InsufficientBalance = 7,
     /// A guarded section was re-entered (Issue #472).
     Reentrancy = 8,
+    /// Buyer and seller are the same address.
+    SelfTrade = 9,
+    /// The offer's price is above the buyer's `max_price`, or the order's
+    /// price is below the seller's `min_price`.
+    SlippageExceeded = 10,
+    /// Requested amount is zero or larger than what the offer/order holds.
+    InvalidAmount = 11,
+    /// The limit order does not exist, is not a buy order, or is for a
+    /// different resource.
+    OrderUnavailable = 12,
 }
 
 impl crate::error_standard::StandardContractError for HarvestError {
@@ -551,7 +563,10 @@ impl crate::error_standard::StandardContractError for HarvestError {
             Self::EmptyHarvest | Self::InvalidPrice => (ErrorKind::Validation, false),
             Self::PriceOverflow | Self::DexFailure => (ErrorKind::Internal, false),
             Self::InsufficientBalance => (ErrorKind::ResourceLimit, false),
-            Self::Reentrancy => (ErrorKind::Conflict, false),
+            Self::Reentrancy | Self::SelfTrade => (ErrorKind::Conflict, false),
+            Self::SlippageExceeded => (ErrorKind::Conflict, true),
+            Self::InvalidAmount => (ErrorKind::Validation, false),
+            Self::OrderUnavailable => (ErrorKind::NotFound, false),
         };
         crate::error_standard::ErrorDescriptor {
             module: "resource_minter",
@@ -583,6 +598,15 @@ pub(crate) fn next_dex_offer_id(env: &Env) -> Result<u64, HarvestError> {
         .instance()
         .set(&ResourceKey::DexOfferCounter, &next);
     Ok(next)
+}
+
+/// Highest DEX offer ID allocated so far (`0` when none exist). Offer IDs are
+/// dense, so `1..=dex_offer_count()` enumerates every offer ever created.
+pub(crate) fn dex_offer_count(env: &Env) -> u64 {
+    env.storage()
+        .instance()
+        .get(&ResourceKey::DexOfferCounter)
+        .unwrap_or(0)
 }
 
 /// Read a holder's harvest balance for `asset`.
@@ -752,6 +776,7 @@ fn auto_list_on_dex_unguarded(
     env.storage()
         .instance()
         .set(&ResourceKey::DexOffer(offer_id), &offer);
+    crate::dex_integration::note_listing_opened(env, player);
 
     env.events().publish(
         (symbol_short!("dex"), symbol_short!("listed")),
@@ -827,14 +852,7 @@ mod tests {
         let env = make_env();
         let caller = Address::generate(&env);
         let result = in_contract(&env, || {
-            ResourceMinterContract::mint_resource(
-                &env,
-                caller,
-                1,
-                0,
-                ResourceType::StellarDust,
-                0,
-            )
+            ResourceMinterContract::mint_resource(&env, caller, 1, 0, ResourceType::StellarDust, 0)
         });
         assert_eq!(result, Err(MinterError::InvalidAmount));
     }
@@ -1161,7 +1179,7 @@ mod tests {
 
         /// Register a ship owned by `owner` and return its ID.
         fn ship_for(env: &Env, owner: &Address) -> u64 {
-            ship_nft::mint_ship(
+            crate::ship_nft::mint_ship(
                 env,
                 owner,
                 &soroban_sdk::symbol_short!("explorer"),
@@ -1225,7 +1243,7 @@ mod tests {
             let to = Address::generate(env);
 
             let ship_id = c.invoke(|env| ship_for(env, &from));
-            c.invoke(|env| ship_nft::transfer_ship(env, ship_id, &from, &to).unwrap());
+            c.invoke(|env| crate::ship_nft::transfer_ship(env, ship_id, &from, &to).unwrap());
 
             let layout = layout_with(env, CellType::DarkMatter, 12);
             c.invoke(|env| harvest_resources(env, ship_id, &layout).unwrap());
@@ -1356,11 +1374,11 @@ mod tests {
                 let owner = Address::generate(env);
                 let ship_id = ship_for(env, &owner);
                 let layout = layout_with(env, CellType::Wormhole, 8);
-                let before = env.events().all().len();
+                let before = env.events().all().events().len();
 
                 harvest_resources(env, ship_id, &layout).unwrap();
 
-                assert_eq!(env.events().all().len(), before + 1);
+                assert_eq!(env.events().all().events().len(), before + 1);
             });
         }
 
@@ -1470,11 +1488,11 @@ mod tests {
                 let seller = Address::generate(env);
                 let asset = soroban_sdk::symbol_short!("dust");
                 credit_resource_balance(env, &seller, &asset, 4).unwrap();
-                let before = env.events().all().len();
+                let before = env.events().all().events().len();
 
                 auto_list_on_dex(env, &seller, &asset, 2).unwrap();
 
-                assert_eq!(env.events().all().len(), before + 1);
+                assert_eq!(env.events().all().events().len(), before + 1);
             });
         }
 
