@@ -8,12 +8,14 @@
 //     at the top of mint_resource() before any state mutation.
 //   • RateLimitHit events are emitted inside check_rate_limit.
 
+use crate::economics::anti_whale::{process_anti_whale_action, AntiWhaleError};
 use crate::nebula_explorer::{CellType, NebulaLayout};
 use crate::nebula_gen::{NebulaError as NebulaGenError, NebulaGen};
 use crate::rate_limiter::{check_rate_limit, Operation, RateLimitError};
 use crate::reentrancy_guard::{with_guard, ReentrancyError};
-use crate::economics::anti_whale::{process_anti_whale_action, AntiWhaleError};
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec,
+};
 
 pub type AssetId = ResourceType;
 
@@ -827,14 +829,7 @@ mod tests {
         let env = make_env();
         let caller = Address::generate(&env);
         let result = in_contract(&env, || {
-            ResourceMinterContract::mint_resource(
-                &env,
-                caller,
-                1,
-                0,
-                ResourceType::StellarDust,
-                0,
-            )
+            ResourceMinterContract::mint_resource(&env, caller, 1, 0, ResourceType::StellarDust, 0)
         });
         assert_eq!(result, Err(MinterError::InvalidAmount));
     }
@@ -1161,7 +1156,7 @@ mod tests {
 
         /// Register a ship owned by `owner` and return its ID.
         fn ship_for(env: &Env, owner: &Address) -> u64 {
-            ship_nft::mint_ship(
+            crate::ship_nft::mint_ship(
                 env,
                 owner,
                 &soroban_sdk::symbol_short!("explorer"),
@@ -1225,7 +1220,7 @@ mod tests {
             let to = Address::generate(env);
 
             let ship_id = c.invoke(|env| ship_for(env, &from));
-            c.invoke(|env| ship_nft::transfer_ship(env, ship_id, &from, &to).unwrap());
+            c.invoke(|env| crate::ship_nft::transfer_ship(env, ship_id, &from, &to).unwrap());
 
             let layout = layout_with(env, CellType::DarkMatter, 12);
             c.invoke(|env| harvest_resources(env, ship_id, &layout).unwrap());
@@ -1356,11 +1351,11 @@ mod tests {
                 let owner = Address::generate(env);
                 let ship_id = ship_for(env, &owner);
                 let layout = layout_with(env, CellType::Wormhole, 8);
-                let before = env.events().all().len();
+                let before = env.events().all().events().len();
 
                 harvest_resources(env, ship_id, &layout).unwrap();
 
-                assert_eq!(env.events().all().len(), before + 1);
+                assert_eq!(env.events().all().events().len(), before + 1);
             });
         }
 
@@ -1470,11 +1465,11 @@ mod tests {
                 let seller = Address::generate(env);
                 let asset = soroban_sdk::symbol_short!("dust");
                 credit_resource_balance(env, &seller, &asset, 4).unwrap();
-                let before = env.events().all().len();
+                let before = env.events().all().events().len();
 
                 auto_list_on_dex(env, &seller, &asset, 2).unwrap();
 
-                assert_eq!(env.events().all().len(), before + 1);
+                assert_eq!(env.events().all().events().len(), before + 1);
             });
         }
 
