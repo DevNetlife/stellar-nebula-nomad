@@ -33,7 +33,11 @@ pub struct IndexerCallback {
     pub status: Symbol, // Active / Inactive
 }
 
-pub fn register_indexer_callback(env: Env, caller: Address, callback_id: Symbol) -> Result<(), IndexerError> {
+pub fn register_indexer_callback(
+    env: Env,
+    caller: Address,
+    callback_id: Symbol,
+) -> Result<(), IndexerError> {
     caller.require_auth();
 
     let callback = IndexerCallback {
@@ -41,7 +45,9 @@ pub fn register_indexer_callback(env: Env, caller: Address, callback_id: Symbol)
         status: symbol_short!("Active"),
     };
 
-    env.storage().persistent().set(&(symbol_short!("idx_cb"), callback_id.clone()), &callback);
+    env.storage()
+        .persistent()
+        .set(&(symbol_short!("idx_cb"), callback_id.clone()), &callback);
 
     env.events().publish(
         (symbol_short!("indexer"), symbol_short!("registrd")),
@@ -51,18 +57,22 @@ pub fn register_indexer_callback(env: Env, caller: Address, callback_id: Symbol)
     Ok(())
 }
 
-pub fn trigger_indexer_event(env: Env, event_type: Symbol, payload: BytesN<256>) -> Result<(), IndexerError> {
+pub fn trigger_indexer_event(
+    env: Env,
+    event_type: Symbol,
+    payload: BytesN<256>,
+) -> Result<(), IndexerError> {
     // This function serves as a standardized hook for the indexer.
     // Every call triggers an event that horizon indexers can filter and aggregate.
 
-    env.events().publish(
-        (symbol_short!("idxr_ev"), event_type),
-        (payload,),
-    );
+    env.events()
+        .publish((symbol_short!("idxr_ev"), event_type), (payload,));
 
     Ok(())
 }
 
 pub fn get_callback_status(env: Env, callback_id: Symbol) -> Option<IndexerCallback> {
-    env.storage().persistent().get(&(symbol_short!("idx_cb"), callback_id))
+    env.storage()
+        .persistent()
+        .get(&(symbol_short!("idx_cb"), callback_id))
 }

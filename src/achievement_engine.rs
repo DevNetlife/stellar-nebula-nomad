@@ -248,7 +248,11 @@ fn default_templates(env: &Env) -> Vec<AchievementTemplate> {
 }
 
 fn ensure_templates(env: &Env) {
-    if env.storage().persistent().has(&AchievementKey::TemplateCount) {
+    if env
+        .storage()
+        .persistent()
+        .has(&AchievementKey::TemplateCount)
+    {
         return;
     }
 
@@ -326,7 +330,10 @@ fn push_badge(env: &Env, player: &Address, badge_id: u64) {
 fn unlocked_flag(env: &Env, player: &Address, achievement_id: u64) -> bool {
     env.storage()
         .persistent()
-        .has(&AchievementKey::PlayerAchievement(player.clone(), achievement_id))
+        .has(&AchievementKey::PlayerAchievement(
+            player.clone(),
+            achievement_id,
+        ))
 }
 
 fn unlock_achievement_inner(
@@ -345,11 +352,17 @@ fn unlock_achievement_inner(
     }
 
     let template = get_template(env, achievement_id)?;
-    let profile = get_profile_by_owner(env, player).map_err(|_| AchievementError::ProfileNotFound)?;
+    let profile =
+        get_profile_by_owner(env, player).map_err(|_| AchievementError::ProfileNotFound)?;
     let ships = ship_nft::get_ships_by_owner(env, player);
     let ship_count = ships.len() as u32;
 
-    if !meets_template(&template, profile.total_scans, profile.essence_earned, ship_count) {
+    if !meets_template(
+        &template,
+        profile.total_scans,
+        profile.essence_earned,
+        ship_count,
+    ) {
         return Err(AchievementError::NotEligible);
     }
 
@@ -412,7 +425,12 @@ pub fn batch_unlock_achievements(
     let mut i = 0u32;
     while i < achievement_ids.len() {
         if let Some(achievement_id) = achievement_ids.get(i) {
-            badges.push_back(unlock_achievement_inner(env, &player, achievement_id, false)?);
+            badges.push_back(unlock_achievement_inner(
+                env,
+                &player,
+                achievement_id,
+                false,
+            )?);
         }
         i += 1;
     }
@@ -424,7 +442,8 @@ pub fn check_achievement_progress(
     env: &Env,
     player: Address,
 ) -> Result<Vec<AchievementProgress>, AchievementError> {
-    let profile = get_profile_by_owner(env, &player).map_err(|_| AchievementError::ProfileNotFound)?;
+    let profile =
+        get_profile_by_owner(env, &player).map_err(|_| AchievementError::ProfileNotFound)?;
     let ships = ship_nft::get_ships_by_owner(env, &player);
     let ship_count = ships.len() as u32;
     ensure_templates(env);
@@ -447,8 +466,18 @@ pub fn check_achievement_progress(
                 achievement_id: i,
                 title: template.title.clone(),
                 unlocked: unlocked_flag(env, &player, i),
-                eligible: meets_template(&template, profile.total_scans, profile.essence_earned, ship_count),
-                progress_pct: achievement_progress_pct(&template, profile.total_scans, profile.essence_earned, ship_count),
+                eligible: meets_template(
+                    &template,
+                    profile.total_scans,
+                    profile.essence_earned,
+                    ship_count,
+                ),
+                progress_pct: achievement_progress_pct(
+                    &template,
+                    profile.total_scans,
+                    profile.essence_earned,
+                    ship_count,
+                ),
             });
         }
         i += 1;
@@ -458,7 +487,8 @@ pub fn check_achievement_progress(
 }
 
 pub fn get_player_achievement_count(env: &Env, player: Address) -> Result<u32, AchievementError> {
-    let profile = get_profile_by_owner(env, &player).map_err(|_| AchievementError::ProfileNotFound)?;
+    let profile =
+        get_profile_by_owner(env, &player).map_err(|_| AchievementError::ProfileNotFound)?;
     Ok(profile.achievement_flags.count_ones())
 }
 

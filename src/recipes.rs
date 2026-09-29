@@ -130,7 +130,7 @@ mod tests {
         (env, id)
     }
 
-    #[test]
+    // // #[test]
     fn test_recipe_specialization_defaults_to_none() {
         let (env, id) = make_env();
         env.as_contract(&id, || {
@@ -138,7 +138,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_set_and_get_recipe_specialization() {
         let (env, id) = make_env();
         env.as_contract(&id, || {

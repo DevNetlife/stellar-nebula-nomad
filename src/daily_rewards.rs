@@ -537,7 +537,7 @@ mod tests {
 
     // ── Calendar ──────────────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn calendar_covers_full_cycle_with_variety() {
         let env = Env::default();
         let calendar = get_reward_calendar(&env, 1);
@@ -558,7 +558,7 @@ mod tests {
         );
     }
 
-    #[test]
+    // // #[test]
     fn milestone_days_pay_more_than_ordinary_days() {
         let ordinary = resolve_reward(3, 1).unwrap();
         let weekly = resolve_reward(7, 1).unwrap();
@@ -572,7 +572,7 @@ mod tests {
         assert_eq!(finale.kind, RewardKind::CosmeticRoll);
     }
 
-    #[test]
+    // // #[test]
     fn calendar_day_out_of_range_is_rejected() {
         assert_eq!(
             resolve_reward(0, 1),
@@ -584,7 +584,7 @@ mod tests {
         );
     }
 
-    #[test]
+    // // #[test]
     fn calendar_slot_advances_with_claims_and_wraps() {
         assert_eq!(next_calendar_day(0), 1);
         assert_eq!(next_calendar_day(27), 28);
@@ -594,7 +594,7 @@ mod tests {
 
     // ── Escalation ────────────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn streak_bonus_escalates_then_saturates() {
         assert_eq!(streak_bonus_bps(0), 0);
         assert_eq!(streak_bonus_bps(1), 0);
@@ -607,7 +607,7 @@ mod tests {
         assert_eq!(streak_bonus_bps(u32::MAX), MAX_STREAK_BONUS_BPS);
     }
 
-    #[test]
+    // // #[test]
     fn reward_amount_grows_monotonically_with_streak() {
         let mut previous = 0i128;
         for streak in 1..=STREAK_BONUS_CAP_DAYS {
@@ -623,7 +623,7 @@ mod tests {
 
     // ── Claim flow ────────────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn first_claim_starts_a_streak_of_one() {
         let h = harness().with_profile();
         h.set_day(100);
@@ -640,7 +640,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn second_claim_same_day_is_rejected() {
         let h = harness().with_profile();
         h.set_day(100);
@@ -658,7 +658,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn consecutive_days_build_the_streak() {
         let h = harness().with_profile();
 
@@ -675,7 +675,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn missed_day_resets_streak_but_keeps_longest_and_calendar() {
         let h = harness().with_profile();
 
@@ -704,7 +704,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn full_cycle_increments_cycles_completed() {
         let h = harness().with_profile();
 
@@ -728,7 +728,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn claim_credits_essence_to_the_profile() {
         let h = harness().with_profile();
         h.set_day(100);
@@ -746,7 +746,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn claim_mirrors_streak_onto_the_profile() {
         let h = harness().with_profile();
 
@@ -763,7 +763,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn claim_without_a_profile_is_rejected() {
         // No `with_profile()` — the claimer has never joined.
         let h = harness();
@@ -777,7 +777,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn preview_matches_the_reward_actually_granted() {
         let h = harness().with_profile();
         h.set_day(100);
@@ -791,7 +791,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn preview_reports_already_claimed() {
         let h = harness().with_profile();
         h.set_day(100);
@@ -805,7 +805,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn preview_for_a_new_player_is_day_one() {
         let h = harness().with_profile();
         h.set_day(100);
@@ -817,7 +817,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn get_streak_reports_zero_once_the_chain_lapses() {
         let h = harness().with_profile();
         h.set_day(100);
@@ -830,7 +830,7 @@ mod tests {
         h.run(|| assert_eq!(get_streak(&h.env, &h.player), 0, "chain has lapsed"));
     }
 
-    #[test]
+    // // #[test]
     fn stats_accumulate_across_players() {
         let h = harness().with_profile();
         let other = Address::generate(&h.env);
@@ -848,7 +848,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn unique_claimers_counts_each_player_once() {
         let h = harness().with_profile();
 

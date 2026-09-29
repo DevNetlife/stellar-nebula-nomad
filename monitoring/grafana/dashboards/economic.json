@@ -1,0 +1,28 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": { "list": [] },
+  "description": "Economic metrics — prices, volumes, and TVL (issue #516)",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 }, "id": 1, "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }, "title": "TVL (USD)", "type": "stat", "targets": [{ "expr": "nebula_total_value_locked_usd", "legendFormat": "TVL", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 8, "x": 8, "y": 0 }, "id": 2, "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }, "title": "24h Volume (USD)", "type": "stat", "targets": [{ "expr": "increase(nebula_trade_volume_usd_total[24h])", "legendFormat": "24h Volume", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 }, "id": 3, "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }, "title": "Native Token Price", "type": "stat", "targets": [{ "expr": "nebula_token_price_usd", "legendFormat": "Price", "refId": "A" }] },
+    { "datasource": "Prometheus", "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] }, "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 }, "id": 4, "options": { "tooltip": { "mode": "multi" } }, "title": "Price over time", "type": "timeseries", "targets": [{ "expr": "nebula_token_price_usd", "legendFormat": "Price", "refId": "A" }] },
+    { "datasource": "Prometheus", "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] }, "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 }, "id": 5, "options": { "tooltip": { "mode": "multi" } }, "title": "Trade volume over time", "type": "timeseries", "targets": [{ "expr": "rate(nebula_trade_volume_usd_total[1h])", "legendFormat": "Volume/hr", "refId": "A" }] },
+    { "datasource": "Prometheus", "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] }, "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 }, "id": 6, "options": { "tooltip": { "mode": "multi" } }, "title": "TVL over time", "type": "timeseries", "targets": [{ "expr": "nebula_total_value_locked_usd", "legendFormat": "TVL", "refId": "A" }] }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": ["nebula-nomad", "economic"],
+  "templating": { "list": [] },
+  "time": { "from": "now-7d", "to": "now" },
+  "timezone": "utc",
+  "title": "Economic Metrics",
+  "uid": "nebula-economic",
+  "version": 1
+}

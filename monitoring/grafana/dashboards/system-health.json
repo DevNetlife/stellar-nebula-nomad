@@ -1,0 +1,31 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": { "list": [] },
+  "description": "System health — uptime and resource usage across all services (issue #516)",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 }, "id": 1, "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }, "title": "Uptime", "type": "stat", "targets": [{ "expr": "avg(up)", "legendFormat": "Uptime", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 }, "id": 2, "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }, "title": "CPU Usage", "type": "stat", "targets": [{ "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))", "legendFormat": "CPU", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 }, "id": 3, "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }, "title": "Memory Usage", "type": "stat", "targets": [{ "expr": "1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)", "legendFormat": "Memory", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 }, "id": 4, "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" }, "title": "Disk Usage", "type": "stat", "targets": [{ "expr": "1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})", "legendFormat": "Disk", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 0, "y": 4 }, "id": 5, "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }, "title": "API p95 Latency", "type": "stat", "targets": [{ "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))", "legendFormat": "p95", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 6, "y": 4 }, "id": 6, "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }, "title": "API Error Rate", "type": "stat", "targets": [{ "expr": "rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m])", "legendFormat": "5xx rate", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 12, "y": 4 }, "id": 7, "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }, "title": "DB Connections", "type": "stat", "targets": [{ "expr": "pg_stat_activity_count", "legendFormat": "Postgres connections", "refId": "A" }] },
+    { "datasource": "Prometheus", "gridPos": { "h": 4, "w": 6, "x": 18, "y": 4 }, "id": 8, "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }, "title": "Redis Memory", "type": "stat", "targets": [{ "expr": "redis_memory_used_bytes", "legendFormat": "Redis mem", "refId": "A" }] },
+    { "datasource": "Prometheus", "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } }, "overrides": [] }, "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 }, "id": 9, "options": { "tooltip": { "mode": "multi" } }, "title": "CPU / Memory over time", "type": "timeseries", "targets": [{ "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))", "legendFormat": "CPU", "refId": "A" }, { "expr": "1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)", "legendFormat": "Memory", "refId": "B" }] }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["nebula-nomad", "system-health"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "utc",
+  "title": "System Health",
+  "uid": "nebula-system-health",
+  "version": 1
+}

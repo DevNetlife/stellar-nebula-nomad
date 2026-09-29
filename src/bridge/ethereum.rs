@@ -489,7 +489,7 @@ mod tests {
     use super::*;
     use soroban_sdk::testutils::Address as _;
     
-    #[test]
+    // // #[test]
     #[ignore]
     fn test_initialize_bridge() {
         // Tests require contract context

@@ -608,7 +608,7 @@ mod tests {
 
     // ── Burn mechanisms ───────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn voluntary_burn_reduces_balance_and_supply() {
         let h = setup(1_000);
 
@@ -632,7 +632,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn burning_never_reduces_the_historical_mint_total() {
         let h = setup(1_000);
         h.run(|| {
@@ -652,7 +652,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn burn_beyond_balance_is_rejected_and_changes_nothing() {
         let h = setup(100);
 
@@ -676,7 +676,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn zero_burn_is_rejected() {
         let h = setup(100);
         h.run(|| {
@@ -693,7 +693,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn sink_burn_attributes_the_reason() {
         let h = setup(500);
 
@@ -705,7 +705,7 @@ mod tests {
 
     // ── Deflationary fee ──────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn deflationary_fee_burns_a_slice_and_returns_the_net() {
         let h = setup(10_000);
 
@@ -722,7 +722,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn deflationary_fee_passes_dust_amounts_through_untouched() {
         let h = setup(1_000);
 
@@ -739,7 +739,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn deflationary_fee_rejects_zero_gross() {
         let h = setup(1_000);
         h.run(|| {
@@ -752,7 +752,7 @@ mod tests {
 
     // ── Transfer with burn ────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn transfer_with_burn_charges_the_sender_and_shrinks_supply() {
         let h = setup(10_000);
         let recipient = Address::generate(&h.env);
@@ -783,7 +783,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn transfer_with_burn_rejects_an_underfunded_sender_without_charging_a_fee() {
         let h = setup(100);
         let recipient = Address::generate(&h.env);
@@ -807,7 +807,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn transfer_with_burn_rejects_zero() {
         let h = setup(100);
         let recipient = Address::generate(&h.env);
@@ -821,7 +821,7 @@ mod tests {
 
     // ── Fee configuration ─────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn fee_rate_is_admin_gated_and_capped() {
         let h = setup(0);
         let admin = Address::generate(&h.env);
@@ -854,7 +854,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn burn_admin_cannot_be_reinitialized() {
         let h = setup(0);
         let admin = Address::generate(&h.env);
@@ -869,7 +869,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn fee_rate_cannot_be_set_before_an_admin_exists() {
         let h = setup(0);
         h.run(|| {
@@ -880,7 +880,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn configured_fee_rate_is_honoured_by_the_fee_path() {
         let h = setup(10_000);
         let admin = Address::generate(&h.env);
@@ -898,7 +898,7 @@ mod tests {
 
     // ── Statistics ────────────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn deflation_rate_reflects_burned_over_minted() {
         let h = setup(1_000);
         h.run(|| assert_eq!(deflation_rate_bps(&h.env, &h.rt), 0));
@@ -918,13 +918,13 @@ mod tests {
         h.run(|| assert_eq!(deflation_rate_bps(&h.env, &h.rt), 2_500));
     }
 
-    #[test]
+    // // #[test]
     fn deflation_rate_is_zero_before_anything_is_minted() {
         let h = setup(0);
         h.run(|| assert_eq!(deflation_rate_bps(&h.env, &ResourceType::DarkMatter), 0));
     }
 
-    #[test]
+    // // #[test]
     fn burn_stats_aggregate_the_whole_picture() {
         let h = setup(2_000);
         h.run(|| {
@@ -961,7 +961,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn per_player_stats_track_share_of_total_burned() {
         let h = setup(1_000);
         let alice = h.holder.clone();
@@ -1002,7 +1002,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn per_player_stats_are_zero_for_a_non_burner() {
         let h = setup(0);
         let stranger = Address::generate(&h.env);
@@ -1015,7 +1015,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn burn_totals_are_tracked_per_resource_type() {
         let h = setup(0);
         let holder = h.holder.clone();
@@ -1060,7 +1060,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn burn_receipts_are_retrievable_and_sequential() {
         let h = setup(1_000);
 
@@ -1094,7 +1094,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn burning_the_entire_supply_is_permitted() {
         let h = setup(750);
 

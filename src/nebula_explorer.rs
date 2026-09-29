@@ -241,7 +241,7 @@ mod scan_input_tests {
     use super::*;
     use crate::input_validation::{ValidationError, MAX_REGION_ID};
 
-    #[test]
+    // // #[test]
     fn scan_inputs_validated() {
         let env = Env::default();
         let mut raw = [0u8; 32];

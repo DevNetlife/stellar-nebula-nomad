@@ -99,7 +99,9 @@ pub fn consume_energy(env: &Env, ship_id: u64, amount: u32) -> Result<u32, Energ
         return Err(EnergyError::InsufficientEnergy);
     }
 
-    let new_balance = current.checked_sub(amount).ok_or(EnergyError::NegativeBalance)?;
+    let new_balance = current
+        .checked_sub(amount)
+        .ok_or(EnergyError::NegativeBalance)?;
 
     env.storage()
         .persistent()
@@ -179,7 +181,7 @@ pub fn get_energy_balance(env: &Env, ship_id: u64) -> Result<EnergyBalance, Ener
         .unwrap_or(BASE_PASSIVE_REGEN);
 
     let regen_key = EnergyKey::LastRegen(ship_id);
-    let last_regen: u64 = env.storage().persistent().get(&regen_key).unwrap_or(0);
+    let _last_regen: u64 = env.storage().persistent().get(&regen_key).unwrap_or(0);
 
     Ok(EnergyBalance {
         ship_id,

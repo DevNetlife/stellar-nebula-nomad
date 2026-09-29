@@ -174,7 +174,7 @@ pub fn send_entangled_message(
     env: &Env,
     caller: &Address,
     pair_id: u64,
-    message: &BytesN<64>,
+    _message: &BytesN<64>,
 ) -> Result<u64, EntanglementError> {
     caller.require_auth();
 
@@ -237,11 +237,7 @@ pub fn send_entangled_message_batch(
 /// Deactivate a pair before it naturally expires.
 ///
 /// Either participant may dissolve the pair.
-pub fn dissolve_pair(
-    env: &Env,
-    caller: &Address,
-    pair_id: u64,
-) -> Result<(), EntanglementError> {
+pub fn dissolve_pair(env: &Env, caller: &Address, pair_id: u64) -> Result<(), EntanglementError> {
     caller.require_auth();
 
     let mut pair: EntanglementPair = env

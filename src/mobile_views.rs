@@ -1,7 +1,7 @@
 use crate::player_profile::ProfileKey;
 use crate::resource_minter::{MinterKey, ResourceType};
 use crate::ship_nft::DataKey as ShipDataKey;
-use soroban_sdk::{contracttype, contracterror, symbol_short, Address, Env, Vec};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Vec};
 
 // ─── Data Types ───────────────────────────────────────────────────────────────
 
@@ -144,14 +144,11 @@ pub fn get_mobile_dashboard(env: &Env, player: &Address) -> MobileDashboard {
 
     let (has_profile, total_scans, essence_earned) = match profile_id_opt {
         Some(pid) => {
-            use crate::player_profile::PlayerProfile;
-            let profile: Option<PlayerProfile> = env
-                .storage()
-                .persistent()
-                .get(&ProfileKey::Profile(pid));
-            match profile {
-                Some(p) => (true, p.total_scans, p.essence_earned),
-                None => (false, 0u32, 0i128),
+            // Load only the counters section; identity and streaks are not
+            // needed for the dashboard summary.
+            match crate::player_profile::get_profile_progress(env, pid) {
+                Ok(p) => (true, p.total_scans, p.essence_earned),
+                Err(_) => (false, 0u32, 0i128),
             }
         }
         None => (false, 0u32, 0i128),
@@ -169,10 +166,7 @@ pub fn get_mobile_dashboard(env: &Env, player: &Address) -> MobileDashboard {
     let (primary_ship_id, primary_hull, primary_scanner_power) = if ship_count > 0 {
         let first_id = ship_ids.get(0).unwrap();
         use crate::ship_nft::ShipNft;
-        let ship: Option<ShipNft> = env
-            .storage()
-            .persistent()
-            .get(&ShipDataKey::Ship(first_id));
+        let ship: Option<ShipNft> = env.storage().persistent().get(&ShipDataKey::Ship(first_id));
         match ship {
             Some(s) => (s.id, s.hull, s.scanner_power),
             None => (0u64, 0u32, 0u32),
@@ -185,17 +179,26 @@ pub fn get_mobile_dashboard(env: &Env, player: &Address) -> MobileDashboard {
     let dust_balance: u32 = env
         .storage()
         .persistent()
-        .get(&MinterKey::Balance(player.clone(), ResourceType::StellarDust))
+        .get(&MinterKey::Balance(
+            player.clone(),
+            ResourceType::StellarDust,
+        ))
         .unwrap_or(0u64) as u32;
     let ore_balance: u32 = env
         .storage()
         .persistent()
-        .get(&MinterKey::Balance(player.clone(), ResourceType::DarkMatter))
+        .get(&MinterKey::Balance(
+            player.clone(),
+            ResourceType::DarkMatter,
+        ))
         .unwrap_or(0u64) as u32;
     let gas_balance: u32 = env
         .storage()
         .persistent()
-        .get(&MinterKey::Balance(player.clone(), ResourceType::ExoticMatter))
+        .get(&MinterKey::Balance(
+            player.clone(),
+            ResourceType::ExoticMatter,
+        ))
         .unwrap_or(0u64) as u32;
 
     MobileDashboard {
@@ -256,24 +259,34 @@ pub fn batch_get_mobile_info(env: &Env, player: &Address) -> MobileBatchInfo {
     let (has_scan_preview, scan_preview) = if dashboard.primary_ship_id != 0 {
         match get_quick_scan_preview(env, dashboard.primary_ship_id) {
             Ok(p) => (true, p),
-            Err(_) => (false, QuickScanPreview {
+            Err(_) => (
+                false,
+                QuickScanPreview {
+                    ship_id: 0,
+                    scanner_power: 0,
+                    estimated_energy_min: 0,
+                    estimated_energy_max: 0,
+                    predicted_rarity_index: 0,
+                },
+            ),
+        }
+    } else {
+        (
+            false,
+            QuickScanPreview {
                 ship_id: 0,
                 scanner_power: 0,
                 estimated_energy_min: 0,
                 estimated_energy_max: 0,
                 predicted_rarity_index: 0,
-            }),
-        }
-    } else {
-        (false, QuickScanPreview {
-            ship_id: 0,
-            scanner_power: 0,
-            estimated_energy_min: 0,
-            estimated_energy_max: 0,
-            predicted_rarity_index: 0,
-        })
+            },
+        )
     };
-    MobileBatchInfo { dashboard, has_scan_preview, scan_preview }
+    MobileBatchInfo {
+        dashboard,
+        has_scan_preview,
+        scan_preview,
+    }
 }
 
 /// Emit a mobile-subscription event so off-chain indexers know this player

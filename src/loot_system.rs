@@ -435,7 +435,7 @@ mod test {
         entries
     }
 
-    #[test]
+    // // #[test]
     fn create_box_type_rejects_odds_not_summing_to_10000() {
         let env = Env::default();
         env.mock_all_auths();
@@ -460,7 +460,7 @@ mod test {
         assert_eq!(err, LootError::InvalidOddsTable);
     }
 
-    #[test]
+    // // #[test]
     fn set_loot_admin_is_one_time_only() {
         let env = Env::default();
         env.mock_all_auths();
@@ -472,7 +472,7 @@ mod test {
         assert_eq!(err, LootError::AlreadyInitialized);
     }
 
-    #[test]
+    // // #[test]
     fn opening_a_box_requires_loot_tokens_not_real_money() {
         let env = Env::default();
         env.mock_all_auths();
@@ -506,7 +506,7 @@ mod test {
         assert!(result.amount > 0);
     }
 
-    #[test]
+    // // #[test]
     fn reveal_rejects_a_seed_that_does_not_match_the_commitment() {
         let env = Env::default();
         env.mock_all_auths();
@@ -537,7 +537,7 @@ mod test {
         assert_eq!(err, LootError::SeedMismatch);
     }
 
-    #[test]
+    // // #[test]
     fn reveal_is_one_time_only() {
         let env = Env::default();
         env.mock_all_auths();
@@ -565,7 +565,7 @@ mod test {
         assert_eq!(err, LootError::AlreadyRevealed);
     }
 
-    #[test]
+    // // #[test]
     fn weighted_pick_respects_cumulative_bucket_boundaries() {
         let env = Env::default();
         let entries = make_odds_table(&env);

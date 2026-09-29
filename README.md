@@ -1,5 +1,9 @@
 # Nebula Nomad: On-Chain Space Exploration Sim
 
+[![CI Pipeline](https://github.com/Space-Nebula/stellar-nebula-nomad/actions/workflows/ci.yml/badge.svg)](https://github.com/Space-Nebula/stellar-nebula-nomad/actions/workflows/ci.yml)
+[![Security Scan](https://github.com/Space-Nebula/stellar-nebula-nomad/actions/workflows/security.yml/badge.svg)](https://github.com/Space-Nebula/stellar-nebula-nomad/actions/workflows/security.yml)
+[![Deploy](https://github.com/Space-Nebula/stellar-nebula-nomad/actions/workflows/deploy.yml/badge.svg)](https://github.com/Space-Nebula/stellar-nebula-nomad/actions/workflows/deploy.yml)
+
 ## 🌌 Project Overview
 
 **Nebula Nomad** is a decentralized space exploration simulation built on Stellar using Soroban smart contracts. Players explore procedurally generated nebula regions, collect resources, upgrade their explorer ships (NFTs), and participate in a chill, exploration-focused Web3 gaming experience. Unlike traditional competitive games, Nebula Nomad emphasizes discovery, customization, and cooperation—no combat, no pay-to-win, just endless cosmic adventures.

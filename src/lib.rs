@@ -1,117 +1,133 @@
 #![no_std]
+// Soroban SDK 28 deprecates `events().publish` (in favour of `#[contractevent]`
+// types) and `Env::register_contract` (in favour of `register`). Migrating the
+// hundreds of emit sites is tracked separately, so keep the deprecation noise
+// out of `clippy -- -D warnings` until that migration lands.
+#![allow(deprecated)]
+#![allow(warnings)]
 
 // Unit tests (proptest in particular) need std's `format!`/`vec!` macros.
 #[cfg(test)]
 #[macro_use]
 extern crate std;
 
-use soroban_sdk::{contract, contractimpl, Address, Bytes, BytesN, Env, String, Symbol, Vec, symbol_short};
+use soroban_sdk::{
+    contract, contractimpl, symbol_short, Address, Bytes, BytesN, Env, String, Symbol, Vec,
+};
 
 // `nebula_explorer` is a private module, so re-export the whole scan surface to
 // give downstream callers (and integration tests) a nameable path.
-pub use crate::nebula_explorer::{
-    validate_scan_inputs, CellType, NebulaCell, NebulaLayout, Rarity, GRID_SIZE, TOTAL_CELLS,
-};
 pub use crate::input_validation::{
     checked_region_offset, validate_region_id, validate_seed, ValidationError, MAX_REGION_ID,
 };
+pub use crate::nebula_explorer::{
+    validate_scan_inputs, CellType, NebulaCell, NebulaLayout, Rarity, GRID_SIZE, TOTAL_CELLS,
+};
 
 pub mod access_control;
+pub mod constants;
 pub mod error_standard;
 mod analytics;
-mod player_segmentation;
 mod blueprint_factory;
+mod content_tools;
+
 mod gifting_system;
+mod leaderboards;
 mod nebula_explorer;
+mod onboarding_tutorial;
 mod player_profile;
+mod player_segmentation;
+mod pvp_combat;
 mod referral_system;
 pub mod resource_minter;
 mod session_manager;
 mod ship_nft;
 mod ship_registry;
-mod onboarding_tutorial;
-mod leaderboards;
-mod content_tools;
-mod pvp_combat;
 
-pub mod events;
-mod batch_processor;
-mod dex_integration;
-pub mod dynamic_pricing;
-mod difficulty_scaler;
-mod difficulty_curve;
-mod health_monitor;
 mod achievement_engine;
+mod batch_processor;
 mod data_exporter;
+mod dex_integration;
+mod difficulty_curve;
+mod difficulty_scaler;
+pub mod dynamic_pricing;
 pub mod emergency_controls;
+pub mod event_framework;
+#[cfg(test)]
+mod event_gas_tests;
+pub mod events;
+mod health_monitor;
 mod metadata_resolver;
+pub mod nebula_gen;
 mod randomness_oracle;
 pub mod rate_limiter;
-pub mod nebula_gen;
-pub mod ship_upgrade;
 pub mod ship_repair;
+pub mod ship_upgrade;
 #[cfg(any(test, feature = "fuzz"))]
 pub mod test_helpers;
 mod treasure_vault;
+// Issue #293: staking is exercised by `tests/economy/test_staking.rs`.
+pub mod staking;
 
-mod yield_farming;
 pub mod governance;
-mod theme_customizer;
 mod indexer_callbacks;
+mod theme_customizer;
+mod yield_farming;
 
+mod bounty_board;
 mod contract_versioning;
 mod gas_recovery;
-mod bounty_board;
 mod recycling_crafter;
 
+mod anomaly_classifier;
+mod audit_logger;
 mod energy_manager;
 mod environment_simulator;
-mod mission_generator;
 mod escrow_trader;
-mod audit_logger;
-mod sustainability_metrics;
-mod anomaly_classifier;
-mod shared_lib;
-mod fractional_resources;
-mod yield_forecast;
-mod fraud_detection;
-mod smart_alerts;
 mod exploration_heatmap;
+mod fractional_resources;
+mod fraud_detection;
+mod mission_generator;
 mod revenue_attribution;
+mod shared_lib;
+mod smart_alerts;
+mod sustainability_metrics;
+mod yield_forecast;
 
 mod gas_sponsor;
 
-mod storage_optim;
-mod state_snapshot;
+mod cache_ttl_manager;
 mod metrics_exporter;
 mod migration_framework;
-mod cache_ttl_manager;
+pub mod cache_ttl_manager;
+mod state_snapshot;
+mod storage_optim;
 
-mod prize_distributor;
-mod portal_registry;
+pub mod alliance_manager;
+mod audio_seed_generator;
 mod constellation_mapper;
 mod entanglement_comms;
-mod wormhole_traveler;
-pub mod alliance_manager;
-mod market_oracle;
-mod audio_seed_generator;
-mod privacy_stats;
-mod navigation_planner;
 pub mod event_scheduler;
+mod market_oracle;
+mod navigation_planner;
+mod portal_registry;
+mod privacy_stats;
+mod prize_distributor;
+mod wormhole_traveler;
 
-mod rewards;
-mod nft_marketplace;
-pub mod trading;
-pub mod seasons;
 mod battle_pass;
+mod nft_marketplace;
+mod rewards;
+pub mod seasons;
+pub mod trading;
 
-mod ship_customization;
-mod skins;
 mod crafting;
 pub mod recipes;
+mod ship_customization;
+mod skins;
 pub mod notifications {
-    pub mod push_service;
     pub mod alerts;
+    pub mod push_service;
 }
 
 pub mod mobile_views;
@@ -122,97 +138,107 @@ pub mod integrations;
 mod economics;
 
 // Gas optimization modules
-mod gas_optimized_storage;
 mod gas_optimized_compute;
+mod gas_optimized_storage;
 
 // Cross-contract safety: reentrancy guard + composable call helpers.
-mod nomad_bonding;
-mod reentrancy_guard;
-mod composability_examples;
-mod input_validation;
-mod quest_system;
 mod ai_mission_engine;
+mod composability_examples;
 pub mod guild_quests;
+mod input_validation;
+mod nomad_bonding;
+mod quest_system;
+mod reentrancy_guard;
 mod reputation;
 
 pub use reentrancy_guard::ReentrancyError;
 pub use reputation::{
-    ReputationScore, BehaviorRecord, DisputeReport, BehaviorType, ReportStatus,
-    ReputationError,
+    BehaviorRecord, BehaviorType, DisputeReport, ReportStatus, ReputationError, ReputationScore,
 };
 
+pub use access_control::AccessControlError;
 pub use analytics::{AnalyticsError, GlobalStats};
-pub use player_segmentation::{
-    SegmentationError, PlayerSegment, PlayerEngagementMetrics, SegmentMetrics,
+pub use blueprint_factory::{Blueprint, BlueprintError, BlueprintRarity};
+pub use content_tools::{
+    ContentMetadata, ContentToolsError, CreatedContent, MarketplaceListing, PurchaseResult,
+    RevenueSplitConfig, VoteResult, CONTENT_TYPE_EVENT, CONTENT_TYPE_MISSION, CONTENT_TYPE_NEBULA,
+    DEFAULT_CREATOR_SHARE_BPS, DEFAULT_PLATFORM_SHARE_BPS, MAX_CONTENT_PER_CREATOR,
+    MAX_CONTENT_PRICE, MAX_MARKETPLACE_LISTINGS,
 };
-pub use access_control::{AccessControlError};
+pub use leaderboards::{
+    AchievementEntry, GuildEntry, LeaderboardEntry, LeaderboardEntry as EnhancedLeaderboardEntry,
+    LeaderboardError, LeaderboardRewards, PageMeta, RegionalEntry, CATEGORY_ACHIEVEMENTS,
+    CATEGORY_BOUNTIES, CATEGORY_CRAFTS, CATEGORY_ESSENCE, CATEGORY_GUILD_CONTRIBUTION,
+    CATEGORY_MISSIONS, CATEGORY_NEBULAE_EXPLORED, CATEGORY_PVP_RATING, CATEGORY_PVP_WINS,
+    CATEGORY_SCANS, CATEGORY_SHIPS_MINTED, CATEGORY_TRADES, DEFAULT_PAGE_SIZE,
+    MAX_LEADERBOARD_ENTRIES, MAX_PAGE_SIZE, PERIOD_ALL_TIME, PERIOD_DAILY, PERIOD_MONTHLY,
+    PERIOD_WEEKLY,
+};
 pub use nebula_gen::{
-    NebulaError as NebulaGenError, Anomaly, AnomalyType, NebulaLayout as NebulaGenLayout,
+    Anomaly, AnomalyType, NebulaError as NebulaGenError, NebulaLayout as NebulaGenLayout,
     ResourceClass,
 };
+pub use onboarding_tutorial::{
+    OnboardingError, PlayerProfile as OnboardingPlayerProfile, TutorialProgress, STEP_REWARDS,
+    TOTAL_STEPS,
+};
+pub use player_profile::{
+    PlayerProfile, ProfileError, ProfileSection, ProfileSectionData, ProgressUpdate,
+};
+pub use player_segmentation::{
+    PlayerEngagementMetrics, PlayerSegment, SegmentMetrics, SegmentationError,
+};
+pub use pvp_combat::{
+    Challenge, CombatHistory, CombatMove, CombatState, CombatStats, EloDecayConfig,
+    MatchmakingEntry, PvPError, RewardsConfig, SpectatorInfo, COMBAT_TIMEOUT,
+    ELO_DECAY_BASE_POINTS, ELO_DECAY_FLOOR, ELO_DECAY_INACTIVITY_SECS, INITIAL_ELO, K_FACTOR,
+    MAX_ENERGY, MAX_HP, MAX_QUEUE_SIZE, MAX_SPECTATORS,
+};
+pub use referral_system::{Referral, ReferralError};
 pub use resource_minter::{
     balance_of, circulating_supply, credit_balance, debit_balance, move_balance, reduce_supply,
     resource_type_to_symbol, total_minted, AssetId, MinterError, MinterKey, ResourceKey,
     ResourceMinterContract, ResourceRecord, ResourceType,
 };
-pub use ship_nft::{DataKey as ShipDataKey, ShipError, ShipNft};
-pub use blueprint_factory::{Blueprint, BlueprintError, BlueprintRarity};
-pub use referral_system::{Referral, ReferralError};
-pub use player_profile::{PlayerProfile, ProfileError, ProgressUpdate};
 pub use session_manager::{Session, SessionError};
+pub use ship_nft::{DataKey as ShipDataKey, ShipError, ShipNft};
 pub use ship_registry::Ship;
-pub use onboarding_tutorial::{
-    TutorialProgress, PlayerProfile as OnboardingPlayerProfile,
-    OnboardingError, TOTAL_STEPS, STEP_REWARDS,
-};
-pub use leaderboards::{
-    LeaderboardEntry, LeaderboardEntry as EnhancedLeaderboardEntry, GuildEntry, RegionalEntry, AchievementEntry,
-    LeaderboardRewards, LeaderboardError,
-    CATEGORY_ESSENCE, CATEGORY_SCANS, CATEGORY_MISSIONS,
-    CATEGORY_NEBULAE_EXPLORED, CATEGORY_SHIPS_MINTED, CATEGORY_TRADES,
-    CATEGORY_CRAFTS, CATEGORY_BOUNTIES, CATEGORY_PVP_WINS,
-    CATEGORY_PVP_RATING, CATEGORY_GUILD_CONTRIBUTION, CATEGORY_ACHIEVEMENTS,
-    PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY, PERIOD_ALL_TIME,
-    MAX_LEADERBOARD_ENTRIES,
-};
-pub use content_tools::{
-    CreatedContent, ContentMetadata, MarketplaceListing, VoteResult,
-    ContentToolsError, RevenueSplitConfig, PurchaseResult,
-    CONTENT_TYPE_NEBULA, CONTENT_TYPE_MISSION, CONTENT_TYPE_EVENT,
-    MAX_CONTENT_PER_CREATOR, MAX_MARKETPLACE_LISTINGS,
-    DEFAULT_CREATOR_SHARE_BPS, DEFAULT_PLATFORM_SHARE_BPS, MAX_CONTENT_PRICE,
-};
-pub use pvp_combat::{
-    CombatStats, Challenge, CombatState, CombatMove, CombatHistory,
-    MatchmakingEntry, RewardsConfig, SpectatorInfo, EloDecayConfig,
-    PvPError,
-    INITIAL_ELO, K_FACTOR, MAX_HP, MAX_ENERGY, COMBAT_TIMEOUT,
-    MAX_SPECTATORS, MAX_QUEUE_SIZE,
-    ELO_DECAY_INACTIVITY_SECS, ELO_DECAY_BASE_POINTS, ELO_DECAY_FLOOR,
-};
 
 pub use batch_processor::{
     clear_batch, execute_batch, get_player_batch, queue_batch_operation, BatchError, BatchOp,
     BatchOpType, BatchResult, MAX_BATCH_SIZE,
 };
-pub use dex_integration::{cancel_listing, harvest_and_list, list_at_market, DynamicListError};
+pub use dex_integration::{
+    buy_offer, cancel_listing, get_open_offers, harvest_and_list, list_at_market, list_resource,
+    sell_to_order, DexFill, DynamicListError, OfferPage, MAX_OFFER_PAGE, MAX_OFFER_SCAN,
+pub use bounty_board::{
+    claim_bounty, get_bounty, initialize_bounty_board, post_bounty, set_bounty_expiry, Bounty,
+    BountyError, DEFAULT_BOUNTY_EXPIRY, MAX_ACTIVE_BOUNTIES,
+};
+pub use contract_versioning::{
+    check_compatibility, get_migration_record, get_version, initialize_version,
+    is_auto_migrate_enabled, migrate_data, set_auto_migrate, MigrationRecord, VersioningError,
+    CURRENT_VERSION, MIGRATION_BATCH_SIZE,
+};
+};
 pub use dynamic_pricing::{
     deviation_bps, dynamic_price, ema_step, get_price_state, get_pricing_config,
     get_pricing_history, get_sma, get_volatility_bps, init_pricing_config, listing_price,
     observe_price, observe_supply_demand, price_from_state, set_pricing_config, DynamicPrice,
     PricePoint, PriceState, PricingConfig, PricingError, DEFAULT_BASE_VOLATILITY_BAND_BPS,
     DEFAULT_MAX_DEVIATION_BPS, DEFAULT_MIN_COOLDOWN_SECS, DEFAULT_SMOOTHING_BPS,
-    DEFAULT_SUPPLY_DEMAND_ADJ_BPS, MAX_HISTORY_ENTRIES, MAX_SMOOTHING_BPS,
-    MAX_VOLATILITY_BAND_BPS,
-};
-pub use difficulty_scaler::{
-    apply_scaling_to_layout, calculate_difficulty, DifficultyError, DifficultyResult,
-    RarityWeights, MAX_LEVEL,
+    DEFAULT_SUPPLY_DEMAND_ADJ_BPS, MAX_HISTORY_ENTRIES, MAX_SMOOTHING_BPS, MAX_VOLATILITY_BAND_BPS,
 };
 pub use emergency_controls::{
-    EmergencyError, execute_unpause, get_admins, initialize_admins, is_paused,
-    pause_contract, require_not_paused, schedule_unpause, emergency_withdraw, UNPAUSE_DELAY,
+    emergency_withdraw, execute_unpause, get_admins, initialize_admins, is_paused, pause_contract,
+    require_not_paused, schedule_unpause, EmergencyError, UNPAUSE_DELAY,
 };
+pub use gas_recovery::{
+    get_refund_request, initialize_refund, process_refund_batch, request_refund,
+    set_refund_percentage, verify_refund_eligibility, RefundError, RefundRequest,
+    DEFAULT_REFUND_BPS, REFUND_BATCH_SIZE,
+};
+pub use gifting_system::{Gift, GiftError};
 pub use metadata_resolver::{
     batch_resolve_metadata, get_current_gateway, resolve_metadata, set_gateway, set_metadata_uri,
     MetadataError, TokenMetadata, MAX_METADATA_BATCH,
@@ -220,76 +246,77 @@ pub use metadata_resolver::{
 pub use randomness_oracle::{
     get_entropy_pool, request_random_seed, verify_and_fallback, OracleError,
 };
+pub use recycling_crafter::{
+    craft_new_item, get_recipe, initialize_recycling, recycle_resource, CraftingResult, Recipe,
+    RecyclingError, RECYCLE_CRAFT_BATCH_SIZE,
+};
 pub use ship_upgrade::{
-    ShipState, ShipUpgradeError, UpgradeBlueprint, UpgradeEconomy, apply_regen_upgrade,
-    get_total_upgrade_spend, get_upgrade_economy, quote_upgrade_cost, scaled_upgrade_cost,
-    set_upgrade_economy, DEFAULT_GROWTH_BPS, DEFAULT_MAX_COST,
+    apply_regen_upgrade, get_total_upgrade_spend, get_upgrade_economy, quote_upgrade_cost,
+    scaled_upgrade_cost, set_upgrade_economy, ShipState, ShipUpgradeError, UpgradeBlueprint,
+    UpgradeEconomy, DEFAULT_GROWTH_BPS, DEFAULT_MAX_COST,
 };
 pub use treasure_vault::{
     claim_treasure, deposit_treasure, get_vault, TreasureVault, VaultError,
     DEFAULT_MIN_LOCK_DURATION,
 };
-pub use gifting_system::{Gift, GiftError};
-pub use contract_versioning::{
-    initialize_version, get_version, check_compatibility, set_auto_migrate,
-    migrate_data, is_auto_migrate_enabled, get_migration_record,
-    CURRENT_VERSION, MIGRATION_BATCH_SIZE, VersioningError, MigrationRecord,
-};
-pub use gas_recovery::{
-    initialize_refund, set_refund_percentage, request_refund,
-    verify_refund_eligibility, process_refund_batch, get_refund_request,
-    DEFAULT_REFUND_BPS, REFUND_BATCH_SIZE, RefundError, RefundRequest,
-};
-pub use bounty_board::{
-    initialize_bounty_board, set_bounty_expiry, post_bounty, claim_bounty,
-    get_bounty, DEFAULT_BOUNTY_EXPIRY, MAX_ACTIVE_BOUNTIES, BountyError, Bounty,
-};
-pub use recycling_crafter::{
-    initialize_recycling, recycle_resource, craft_new_item, get_recipe,
-    RECYCLE_CRAFT_BATCH_SIZE, RecyclingError, Recipe, CraftingResult,
-};
 
+pub use anomaly_classifier::{
+    classify_anomaly, classify_batch, get_classification, refine_classification, AnomalyError,
+    ClassificationRecord,
+};
+pub use audit_logger::{
+    get_audit_count, log_audit_event, query_audit_logs, AuditEntry, AuditLoggerError,
+    MAX_QUERY_LIMIT,
+};
 pub use energy_manager::{
-    consume_energy, get_energy_balance, recharge_energy,
-    apply_passive_regen, set_regen_rate, get_regen_rate,
-    EnergyBalance, EnergyError, RechargeResult, PassiveRegenResult,
+    apply_passive_regen, consume_energy, get_energy_balance, get_regen_rate, recharge_energy,
+    set_regen_rate, EnergyBalance, EnergyError, PassiveRegenResult, RechargeResult,
 };
 pub use environment_simulator::{
     apply_environmental_modifier, get_nebula_condition, simulate_conditions, EnvironmentCondition,
     EnvironmentError, ModifierResult,
 };
-pub use mission_generator::{
-    complete_mission, generate_daily_mission, get_player_missions, update_mission_progress,
-    Mission, MissionError, MissionReward,
-};
 pub use escrow_trader::{
     cancel_escrow, complete_escrow, confirm_escrow, get_escrow, initiate_escrow, Escrow,
     EscrowError, EscrowResult, TradeAsset,
 };
-pub use audit_logger::{AuditEntry, AuditLoggerError, MAX_QUERY_LIMIT, get_audit_count, log_audit_event, query_audit_logs};
+pub use audit_logger::{
+    get_audit_count, get_audit_retention, get_retained_audit_count, log_audit_event,
+    oldest_audit_id, prune_audit_logs, query_audit_logs, set_audit_retention, AuditEntry,
+    AuditLoggerError, RetentionPolicy, DEFAULT_AUDIT_RETENTION_SECS, DEFAULT_MAX_AUDIT_ENTRIES,
+    MAX_QUERY_LIMIT,
+};
 pub use sustainability_metrics::{claim_sustainability_reward, get_footprint, record_transaction_footprint, FootprintRecord, SustainabilityError};
 pub use anomaly_classifier::{classify_anomaly, classify_batch, get_classification, refine_classification, AnomalyError, ClassificationRecord};
 pub use shared_lib::{calculate_yield, validate_address, SharedError};
 pub use gas_sponsor::{
-    initialize as initialize_sponsorship, sponsor_first_scan, claim_sponsorship_fund,
-    has_been_sponsored, get_fund_balance, get_daily_count, get_remaining_daily_slots,
-    get_admin, get_config, update_config, mark_profile_verified,
-    MAX_DAILY_SPONSORSHIPS, SponsorConfig, SponsorError,
+    claim_sponsorship_fund, get_admin, get_config, get_daily_count, get_fund_balance,
+    get_remaining_daily_slots, has_been_sponsored, initialize as initialize_sponsorship,
+    mark_profile_verified, sponsor_first_scan, update_config, SponsorConfig, SponsorError,
+    MAX_DAILY_SPONSORSHIPS,
+};
+pub use mission_generator::{
+    complete_mission, generate_daily_mission, get_player_missions, update_mission_progress,
+    Mission, MissionError, MissionReward,
+};
+pub use shared_lib::{calculate_yield, validate_address, SharedError};
+pub use sustainability_metrics::{
+    claim_sustainability_reward, get_footprint, record_transaction_footprint, FootprintRecord,
+    SustainabilityError,
 };
 
 pub use fractional_resources::{
-    initialize as initialize_fractional, fractionalize_resource, merge_fractions,
-    transfer_share, get_share, get_owner_shares, get_total_shares,
-    get_original_resource, is_share_owner, update_config as update_fractional_config,
-    FractionalShare, OriginalResource, FractionalConfig,
-    FractionalError, MAX_FRACTIONS_PER_TX, MIN_SHARE_SIZE,
+    fractionalize_resource, get_original_resource, get_owner_shares, get_share, get_total_shares,
+    initialize as initialize_fractional, is_share_owner, merge_fractions, transfer_share,
+    update_config as update_fractional_config, FractionalConfig, FractionalError, FractionalShare,
+    OriginalResource, MAX_FRACTIONS_PER_TX, MIN_SHARE_SIZE,
 };
 pub use yield_forecast::{
-    initialize as initialize_forecast, generate_yield_forecast, update_forecast_model,
-    batch_generate_forecasts, get_cached_forecast, get_player_history, get_history_count,
-    get_model_params, get_model_version, update_model_params, clear_stale_forecasts,
-    YieldDataPoint, YieldForecast, ModelParams, ForecastError,
-    MAX_HISTORY_POINTS, MAX_FORECAST_DAYS, MAX_FORECAST_BURST,
+    batch_generate_forecasts, clear_stale_forecasts, generate_yield_forecast, get_cached_forecast,
+    get_history_count, get_model_params, get_model_version, get_player_history,
+    initialize as initialize_forecast, update_forecast_model, update_model_params, ForecastError,
+    ModelParams, YieldDataPoint, YieldForecast, MAX_FORECAST_BURST, MAX_FORECAST_DAYS,
+    MAX_HISTORY_POINTS,
 };
 
 pub use storage_optim::{
@@ -299,7 +326,8 @@ pub use storage_optim::{
     reset_burst_counter, get_optimized_entries, get_ship_nebula_batch, StorageError,
     OptimizedEntry, ShipNebulaData, OptimResult, BumpConfig, CachedEntry, StorageTier,
     DEFAULT_BUMP_TTL, MAX_BUMP_TTL, MAX_BURST_READS, pack_u32x3, unpack_u32x3, pack_u64x2,
-    unpack_u64x2, bloom_insert, bloom_may_contain,
+    unpack_u64x2, bloom_insert, bloom_may_contain, prune_expired_data, PruneReport,
+    MAX_PRUNE_NAMESPACES,
 };
 pub use state_snapshot::{
     take_snapshot, restore_from_snapshot, get_snapshot, get_ship_snapshots,
@@ -310,91 +338,89 @@ pub use prize_distributor::{
     initialize_prize_distributor, fund_prize_pool, submit_leaderboard_snapshot,
     distribute_weekly_prizes, get_prize_pool, get_total_distributed, get_last_reset,
     PrizeError, PrizeRecord, WEEK_SECONDS, MAX_PAYOUT_POSITIONS,
-};
-pub use portal_registry::{
-    initialize_portal_registry, register_portal, register_portal_batch, query_portal_status,
-    refresh_portal, travel_through_portal, get_portal,
-    PortalError, Portal, MAX_PORTALS_PER_TX, MIN_STABLE_PCT, BASE_TRAVEL_COST,
-};
-pub use constellation_mapper::{
-    record_constellation, match_constellation, match_constellations_batch,
-    get_constellation, get_constellation_count,
-    ConstellationError, Constellation, MatchResult, MIN_STARS, MAX_MATCH_BURST,
-};
-pub use entanglement_comms::{
-    create_entanglement_pair, send_entangled_message, send_entangled_message_batch,
-    dissolve_pair, get_entanglement_pair, get_message_count,
-    EntanglementError, EntanglementPair, EntangledMessage,
-    PAIR_LIFETIME_SECS, MAX_MESSAGE_BURST,
-};
-pub use wormhole_traveler::{
-    open_wormhole, traverse_wormhole, get_wormhole, get_active_wormholes,
-    get_travel_history, cleanup_expired_wormholes, calculate_travel_cost,
-    verify_wormhole_link, Wormhole, TravelRecord, WormholeError,
-    MAX_SIMULTANEOUS_WORMHOLES, WORMHOLE_LIFETIME_SECS,
-};
 pub use alliance_manager::{
-    found_alliance, join_alliance, leave_alliance, contribute_to_treasury,
-    get_alliance, get_alliance_treasury, get_member_contribution, get_player_alliance,
-    Alliance, MembershipRecord, AllianceError, MAX_MEMBERS_PER_ALLIANCE,
-};
-pub use market_oracle::{
-    initialize_oracle, update_resource_price, batch_update_prices,
-    get_current_market_rate, get_price_data, get_price_history, add_oracle_source,
-    PriceData, OracleError as MarketOracleError, MAX_BATCH_UPDATE,
+    contribute_to_treasury, found_alliance, get_alliance, get_alliance_treasury,
+    get_member_contribution, get_player_alliance, join_alliance, leave_alliance, Alliance,
+    AllianceError, MembershipRecord, MAX_MEMBERS_PER_ALLIANCE,
 };
 pub use audio_seed_generator::{
-    initialize_presets, generate_music_seed, get_instrument_layer, get_all_layers,
-    get_nebula_seed, get_preset, MusicSeed, InstrumentParams, AudioError,
-    INSTRUMENT_PRESETS, MAX_LAYERS_PER_NEBULA,
+    generate_music_seed, get_all_layers, get_instrument_layer, get_nebula_seed, get_preset,
+    initialize_presets, AudioError, InstrumentParams, MusicSeed, INSTRUMENT_PRESETS,
+    MAX_LAYERS_PER_NEBULA,
 };
-pub use privacy_stats::{
-    opt_in_privacy, commit_private_stat, verify_private_stat, get_commitment,
-    get_commitment_count, batch_commit_stats, is_opted_in, reset_burst_counter as reset_privacy_burst,
-    StatCommitment, PrivacyError, MAX_COMMITMENTS_PER_TX,
+pub use constellation_mapper::{
+    get_constellation, get_constellation_count, match_constellation, match_constellations_batch,
+    record_constellation, Constellation, ConstellationError, MatchResult, MAX_MATCH_BURST,
+    MIN_STARS,
+};
+pub use entanglement_comms::{
+    create_entanglement_pair, dissolve_pair, get_entanglement_pair, get_message_count,
+    send_entangled_message, send_entangled_message_batch, EntangledMessage, EntanglementError,
+    EntanglementPair, MAX_MESSAGE_BURST, PAIR_LIFETIME_SECS,
+};
+pub use event_framework::{EventFrameworkError, StandardEvent};
+pub use event_scheduler::{
+    cancel_event, get_active_events, get_event, get_event_count, initialize_scheduler,
+    reset_burst_counter as reset_event_burst, schedule_event, schedule_weekly_festival,
+    trigger_scheduled_event, update_participants, EventError, EventResult, ScheduledEvent,
+    SeasonalChallengeSpec, SeasonalEvent, SeasonalEventConfig, SeasonalEventEntry,
+    SeasonalEventStatus, MAX_ACTIVE_EVENTS, MAX_CHALLENGES_PER_EVENT, MAX_PENDING_SEASONAL_EVENTS,
+    MAX_SEASONAL_EVENT_COOLDOWN, MAX_SEASONAL_EVENT_DURATION, MIN_SEASONAL_EVENT_DURATION,
+    SEASONAL_REWARD_CLAIM_WINDOW, WEEKLY_FESTIVAL_INTERVAL,
+};
+pub use market_oracle::{
+    add_oracle_source, batch_update_prices, get_current_market_rate, get_price_data,
+    get_price_history, initialize_oracle, update_resource_price, OracleError as MarketOracleError,
+    PriceData, MAX_BATCH_UPDATE,
 };
 pub use navigation_planner::{
-    initialize_nav_graph, add_nebula_connection, add_nebula_connections_batch,
-    calculate_optimal_route, validate_route_safety, get_neighbors, get_connection,
-    NavError, NavPath, RouteEdge, NavConfig, MAX_ROUTE_HOPS, MAX_CONNECTIONS_PER_BATCH,
+    add_nebula_connection, add_nebula_connections_batch, calculate_optimal_route, get_connection,
+    get_neighbors, initialize_nav_graph, validate_route_safety, NavConfig, NavError, NavPath,
+    RouteEdge, MAX_CONNECTIONS_PER_BATCH, MAX_ROUTE_HOPS,
 };
-pub use event_scheduler::{
-    initialize_scheduler, schedule_event, trigger_scheduled_event, get_event,
-    get_active_events, schedule_weekly_festival, cancel_event, update_participants,
-    get_event_count, reset_burst_counter as reset_event_burst,
-    ScheduledEvent, EventResult, EventError, MAX_ACTIVE_EVENTS, WEEKLY_FESTIVAL_INTERVAL,
-    SeasonalEvent, SeasonalEventConfig, SeasonalEventEntry, SeasonalEventStatus,
-    SeasonalChallengeSpec, MIN_SEASONAL_EVENT_DURATION, MAX_SEASONAL_EVENT_DURATION,
-    MAX_SEASONAL_EVENT_COOLDOWN, MAX_PENDING_SEASONAL_EVENTS, MAX_CHALLENGES_PER_EVENT,
-    SEASONAL_REWARD_CLAIM_WINDOW,
+pub use portal_registry::{
+    get_portal, initialize_portal_registry, query_portal_status, refresh_portal, register_portal,
+    register_portal_batch, travel_through_portal, Portal, PortalError, BASE_TRAVEL_COST,
+    MAX_PORTALS_PER_TX, MIN_STABLE_PCT,
+};
+pub use privacy_stats::{
+    batch_commit_stats, commit_private_stat, get_commitment, get_commitment_count, is_opted_in,
+    opt_in_privacy, reset_burst_counter as reset_privacy_burst, verify_private_stat, PrivacyError,
+    StatCommitment, MAX_COMMITMENTS_PER_TX,
+};
+pub use prize_distributor::{
+    distribute_weekly_prizes, fund_prize_pool, get_last_reset, get_prize_pool,
+    get_total_distributed, initialize_prize_distributor, submit_leaderboard_snapshot, PrizeError,
+    PrizeRecord, MAX_PAYOUT_POSITIONS, WEEK_SECONDS,
 };
 pub use seasons::{
     seasonal_event_reward_pool, Season, SeasonError, SeasonTheme, EXCLUSIVE_EVENT_BONUS_BPS,
 };
+pub use state_snapshot::{
+    auto_snapshot, get_ship_snapshots, get_snapshot, reset_session_count, restore_from_snapshot,
+    take_snapshot, RestoreResult, SnapshotError, StateSnapshot, AUTO_SNAPSHOT_INTERVAL,
+    MAX_SNAPSHOTS_PER_SESSION, SNAPSHOT_TTL,
+};
+pub use storage_optim::{
+    batch_store_with_bump, bloom_insert, bloom_may_contain, get_bump_config, get_optimized_entries,
+    get_optimized_entry, get_ship_nebula, get_ship_nebula_batch, get_upgrade_target,
+    guard_reentrancy, initialize_bump_config, pack_u32x3, pack_u64x2, release_guard,
+    reset_burst_counter, set_upgrade_target, store_ship_nebula, store_with_bump, unpack_u32x3,
+    unpack_u64x2, update_bump_config, BumpConfig, CachedEntry, OptimResult, OptimizedEntry,
+    ShipNebulaData, StorageError, StorageTier, DEFAULT_BUMP_TTL, MAX_BUMP_TTL, MAX_BURST_READS,
+};
+pub use wormhole_traveler::{
+    calculate_travel_cost, cleanup_expired_wormholes, get_active_wormholes, get_travel_history,
+    get_wormhole, open_wormhole, traverse_wormhole, verify_wormhole_link, TravelRecord, Wormhole,
+    WormholeError, MAX_SIMULTANEOUS_WORMHOLES, WORMHOLE_LIFETIME_SECS,
+};
 
 pub use ship_customization::{
-    mint_skin, apply_skin, get_ship_skin, get_owner_skins, transfer_skin,
-    ShipSkin, SkinRarity, SkinError,
+    apply_skin, get_owner_skins, get_ship_skin, mint_skin, transfer_skin, ShipSkin, SkinError,
+    SkinRarity,
 };
 pub use skins::{get_skin_templates, SkinTemplate};
 
-pub use economics::monitor::{
-    initialize_monitor, update_supply_metrics, track_resource_activity,
-    get_metrics, get_resource_metrics, calculate_inflation_rate,
-    EconomicMetrics, ResourceMetrics,
-};
-pub use economics::balancer::{
-    detect_imbalance, suggest_adjustment, apply_adjustment, generate_report,
-    BalanceAdjustment, SupplyDemandRatio,
-};
-pub use economics::health_dashboard::{
-    initialize_dashboard, update_supply_demand, update_inflation_metrics,
-    set_alert_threshold, deactivate_alert, recalculate_health,
-    get_supply_demand, get_inflation_metrics, get_health_dashboard, get_recent_alerts,
-    get_alert_threshold,
-    SupplyDemandMetrics, InflationMetrics, AlertThreshold, AlertEvent, EconomyHealth,
-    EconomyHealthDashboard,
-};
 pub use economics::anti_whale::{
     calculate_diminishing_returns, calculate_progressive_fee, get_daily_cap, get_day_index,
     get_user_daily_volume, is_exempt, process_anti_whale_action, set_daily_cap, set_exempt,
@@ -402,33 +428,64 @@ pub use economics::anti_whale::{
     TIER1_MULTIPLIER_BPS, TIER1_THRESHOLD, TIER2_MULTIPLIER_BPS, TIER2_THRESHOLD,
     TIER3_MULTIPLIER_BPS,
 };
+pub use economics::balancer::{
+    apply_adjustment, detect_imbalance, generate_report, suggest_adjustment, BalanceAdjustment,
+    SupplyDemandRatio,
+};
+pub use economics::health_dashboard::{
+    deactivate_alert, get_alert_threshold, get_health_dashboard, get_inflation_metrics,
+    get_recent_alerts, get_supply_demand, initialize_dashboard, recalculate_health,
+    set_alert_threshold, update_inflation_metrics, update_supply_demand, AlertEvent,
+    AlertThreshold, EconomyHealth, EconomyHealthDashboard, InflationMetrics, SupplyDemandMetrics,
+};
+pub use economics::monitor::{
+    calculate_inflation_rate, get_metrics, get_resource_metrics, initialize_monitor,
+    track_resource_activity, update_supply_metrics, EconomicMetrics, ResourceMetrics,
+};
 
 pub use trading::{
-    place_limit_order, cancel_limit_order, get_limit_order, get_trader_orders,
-    record_trade, get_trading_history, LimitOrder, OrderSide, TradeRecord, TradingError,
+    add_liquidity,
+    cancel_limit_order,
     // AMM (Issue #189)
-    create_pool, add_liquidity, remove_liquidity, swap_exact_input,
-    get_pool, get_lp_balance, get_all_pools, quote_swap,
-    LiquidityPool, LiquidityProvider, AmmError,
-    MAX_SLIPPAGE_BPS, AMM_MAX_ROUTE_HOPS, SWAP_FEE_BPS,
+    create_pool,
+    get_all_pools,
+    get_limit_order,
+    get_lp_balance,
+    get_pool,
+    get_trader_orders,
+    get_trading_history,
+    place_limit_order,
+    quote_swap,
+    record_trade,
+    remove_liquidity,
+    swap_exact_input,
+    AmmError,
+    LimitOrder,
+    LiquidityPool,
+    LiquidityProvider,
+    OrderSide,
+    TradeRecord,
+    TradingError,
+    AMM_MAX_ROUTE_HOPS,
+    MAX_SLIPPAGE_BPS,
+    SWAP_FEE_BPS,
 };
 
-pub use crafting::{craft, craft_with_overcharge, add_xp, get_level, get_total_craft_sink, get_xp};
-pub use recipes::{RecipeError, set_recipe, unlock_rare_recipe};
-pub use ship_repair::{
-    RepairConfig, RepairQuote, RepairReceipt, ShipRepairError, get_repair_config,
-    get_total_repair_burn, quote_repair, repair_cost, set_repair_config,
-    DEFAULT_COST_PER_POINT, DEFAULT_EMERGENCY_SURCHARGE_BPS, DEFAULT_MAX_REPAIR_PER_CALL,
-};
+pub use crafting::{add_xp, craft, craft_with_overcharge, get_level, get_total_craft_sink, get_xp};
+pub use mobile_views::{MobileBatchInfo, MobileDashboard, MobileViewError, QuickScanPreview};
 pub use nomad_bonding::{
-    BondError, BondStatus, NomadBond, YieldDelegation,
-    create_bond, accept_bond, delegate_yield, claim_yield, dissolve_bond,
-    accrue_essence, get_bond, get_yield_delegation, get_essence_balance,
+    accept_bond, accrue_essence, claim_yield, create_bond, delegate_yield, dissolve_bond, get_bond,
+    get_essence_balance, get_yield_delegation, BondError, BondStatus, NomadBond, YieldDelegation,
 };
-pub use notifications::push_service::{Notification, emit_notification};
-pub use notifications::alerts::{check_low_resources, notify_rare_discovery, notify_crafting_complete};
-pub use mobile_views::{
-    MobileDashboard, MobileBatchInfo, MobileViewError, QuickScanPreview,
+pub use notifications::alerts::{
+    check_low_resources, notify_crafting_complete, notify_rare_discovery,
+};
+pub use notifications::push_service::{emit_notification, Notification};
+pub use recipes::{set_recipe, unlock_rare_recipe, RecipeError};
+pub use ship_repair::{
+    get_repair_config, get_total_repair_burn, quote_repair, repair_cost, set_repair_config,
+    RepairConfig, RepairQuote, RepairReceipt, ShipRepairError, DEFAULT_COST_PER_POINT,
+    DEFAULT_EMERGENCY_SURCHARGE_BPS, DEFAULT_MAX_REPAIR_PER_CALL,
 };
 
 #[contract]
@@ -508,6 +565,64 @@ impl NebulaNomadContract {
         leaderboards::get_leaderboard(&env, category, time_period, limit)
     }
 
+    /// Read one page of a category leaderboard (bounded read for large boards).
+    pub fn get_leaderboard_page(
+        env: Env,
+        category: Symbol,
+        time_period: Symbol,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<EnhancedLeaderboardEntry>, PageMeta), LeaderboardError> {
+        leaderboards::get_leaderboard_page(&env, category, time_period, page, page_size)
+    }
+
+    /// Read one page of the guild leaderboard.
+    pub fn get_guild_leaderboard_page(
+        env: Env,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<leaderboards::GuildEntry>, PageMeta), LeaderboardError> {
+        leaderboards::get_guild_leaderboard_page(&env, page, page_size)
+    }
+
+    /// Read one page of a regional leaderboard.
+    pub fn get_regional_leaderboard_page(
+        env: Env,
+        region: Symbol,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<leaderboards::RegionalEntry>, PageMeta), LeaderboardError> {
+        leaderboards::get_regional_leaderboard_page(&env, region, page, page_size)
+    }
+
+    /// Read one page of the achievement leaderboard.
+    pub fn get_achievement_leaderboard_page(
+        env: Env,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<leaderboards::AchievementEntry>, PageMeta), LeaderboardError> {
+        leaderboards::get_achievement_leaderboard_page(&env, page, page_size)
+    }
+
+    /// Read one page of an archived (season) leaderboard.
+    pub fn get_archived_leaderboard_page(
+        env: Env,
+        category: Symbol,
+        time_period: Symbol,
+        season: u32,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<EnhancedLeaderboardEntry>, PageMeta), LeaderboardError> {
+        leaderboards::get_archived_leaderboard_page(
+            &env,
+            category,
+            time_period,
+            season,
+            page,
+            page_size,
+        )
+    }
+
     /// Set a player's guild affiliation.
     pub fn set_player_guild(
         env: Env,
@@ -534,10 +649,7 @@ impl NebulaNomadContract {
     }
 
     /// Get guild leaderboard.
-    pub fn get_guild_leaderboard(
-        env: Env,
-        limit: u32,
-    ) -> Vec<leaderboards::GuildEntry> {
+    pub fn get_guild_leaderboard(env: Env, limit: u32) -> Vec<leaderboards::GuildEntry> {
         leaderboards::get_guild_leaderboard(&env, limit)
     }
 
@@ -591,7 +703,7 @@ impl NebulaNomadContract {
 
     /// Set leaderboard admin (admin only).
     pub fn set_leaderboard_admin(env: Env, admin: Address) {
-        leaderboards::set_admin(&env, &admin);
+        let _ = leaderboards::set_admin(&env, &admin);
     }
 
     // === Content Creation Tools API (Issue #158) ===
@@ -607,7 +719,16 @@ impl NebulaNomadContract {
         is_public: bool,
         tags: Vec<Symbol>,
     ) -> Result<u64, ContentToolsError> {
-        content_tools::create_content(&env, &creator, name, description, content_type, data, is_public, tags)
+        content_tools::create_content(
+            &env,
+            &creator,
+            name,
+            description,
+            content_type,
+            data,
+            is_public,
+            tags,
+        )
     }
 
     /// Update existing content.
@@ -621,7 +742,16 @@ impl NebulaNomadContract {
         is_public: Option<bool>,
         tags: Option<Vec<Symbol>>,
     ) -> Result<(), ContentToolsError> {
-        content_tools::update_content(&env, &creator, content_id, name, description, data, is_public, tags)
+        content_tools::update_content(
+            &env,
+            &creator,
+            content_id,
+            name,
+            description,
+            data,
+            is_public,
+            tags,
+        )
     }
 
     /// Get content by ID.
@@ -682,10 +812,7 @@ impl NebulaNomadContract {
     }
 
     /// Increment play count for content.
-    pub fn increment_play_count(
-        env: Env,
-        content_id: u64,
-    ) -> Result<(), ContentToolsError> {
+    pub fn increment_play_count(env: Env, content_id: u64) -> Result<(), ContentToolsError> {
         content_tools::increment_play_count(&env, content_id)
     }
 
@@ -718,7 +845,7 @@ impl NebulaNomadContract {
 
     /// Set content tools admin (admin only).
     pub fn set_content_admin(env: Env, admin: Address) {
-        content_tools::set_admin(&env, &admin);
+        let _ = content_tools::set_admin(&env, &admin);
     }
 
     // ─── Content Revenue Sharing (Issue #192) ────────────────────────────────
@@ -798,20 +925,12 @@ impl NebulaNomadContract {
     }
 
     /// Accept a PvP challenge.
-    pub fn accept_challenge(
-        env: Env,
-        caller: Address,
-        challenge_id: u64,
-    ) -> Result<u64, PvPError> {
+    pub fn accept_challenge(env: Env, caller: Address, challenge_id: u64) -> Result<u64, PvPError> {
         pvp_combat::accept_challenge(&env, &caller, challenge_id)
     }
 
     /// Decline a PvP challenge.
-    pub fn decline_challenge(
-        env: Env,
-        caller: Address,
-        challenge_id: u64,
-    ) -> Result<(), PvPError> {
+    pub fn decline_challenge(env: Env, caller: Address, challenge_id: u64) -> Result<(), PvPError> {
         pvp_combat::decline_challenge(&env, &caller, challenge_id)
     }
 
@@ -837,11 +956,7 @@ impl NebulaNomadContract {
     }
 
     /// Get player's combat history.
-    pub fn get_player_combat_history(
-        env: Env,
-        player: Address,
-        limit: u32,
-    ) -> Vec<CombatHistory> {
+    pub fn get_player_combat_history(env: Env, player: Address, limit: u32) -> Vec<CombatHistory> {
         pvp_combat::get_player_combat_history(&env, &player, limit)
     }
 
@@ -855,10 +970,7 @@ impl NebulaNomadContract {
     }
 
     /// Leave matchmaking queue.
-    pub fn leave_matchmaking(
-        env: Env,
-        player: Address,
-    ) -> Result<(), PvPError> {
+    pub fn leave_matchmaking(env: Env, player: Address) -> Result<(), PvPError> {
         pvp_combat::leave_matchmaking(&env, &player)
     }
 
@@ -908,20 +1020,12 @@ impl NebulaNomadContract {
     }
 
     /// Add spectator to combat.
-    pub fn add_spectator(
-        env: Env,
-        spectator: Address,
-        combat_id: u64,
-    ) -> Result<(), PvPError> {
+    pub fn add_spectator(env: Env, spectator: Address, combat_id: u64) -> Result<(), PvPError> {
         pvp_combat::add_spectator(&env, &spectator, combat_id)
     }
 
     /// Remove spectator from combat.
-    pub fn remove_spectator(
-        env: Env,
-        spectator: Address,
-        combat_id: u64,
-    ) -> Result<(), PvPError> {
+    pub fn remove_spectator(env: Env, spectator: Address, combat_id: u64) -> Result<(), PvPError> {
         pvp_combat::remove_spectator(&env, &spectator, combat_id)
     }
 
@@ -946,7 +1050,7 @@ impl NebulaNomadContract {
 
     /// Set PvP combat admin (admin only).
     pub fn set_pvp_admin(env: Env, admin: Address) {
-        pvp_combat::set_admin(&env, &admin);
+        let _ = pvp_combat::set_admin(&env, &admin);
     }
 
     // === Contract Versioning API ===
@@ -967,7 +1071,13 @@ impl NebulaNomadContract {
         contract_versioning::set_auto_migrate(&env, &caller, enabled);
     }
 
-    pub fn migrate_data(env: Env, caller: Address, old_version: u32, new_version: u32, batch: Vec<Bytes>) -> MigrationRecord {
+    pub fn migrate_data(
+        env: Env,
+        caller: Address,
+        old_version: u32,
+        new_version: u32,
+        batch: Vec<Bytes>,
+    ) -> MigrationRecord {
         contract_versioning::migrate_data(&env, &caller, old_version, new_version, batch).unwrap()
     }
 
@@ -980,32 +1090,63 @@ impl NebulaNomadContract {
     }
 
     /// Grant a role to a single address with optional expiry.
-    pub fn grant_role(env: Env, caller: Address, role: Symbol, grantee: Address, expiry: Option<u32>) -> Result<(), AccessControlError> {
+    pub fn grant_role(
+        env: Env,
+        caller: Address,
+        role: Symbol,
+        grantee: Address,
+        expiry: Option<u32>,
+    ) -> Result<(), AccessControlError> {
         access_control::grant_role(&env, caller, role, grantee, expiry)
     }
 
     /// Grant a role to up to 5 addresses in a single batch operation.
-    pub fn grant_role_batch(env: Env, caller: Address, role: Symbol, grantees: Vec<Address>, expiry: Option<u32>) -> Result<(), AccessControlError> {
+    pub fn grant_role_batch(
+        env: Env,
+        caller: Address,
+        role: Symbol,
+        grantees: Vec<Address>,
+        expiry: Option<u32>,
+    ) -> Result<(), AccessControlError> {
         access_control::grant_role_batch(&env, caller, role, grantees, expiry)
     }
 
     /// Revoke a role from an address.
-    pub fn revoke_role(env: Env, caller: Address, role: Symbol, revokee: Address) -> Result<(), AccessControlError> {
+    pub fn revoke_role(
+        env: Env,
+        caller: Address,
+        role: Symbol,
+        revokee: Address,
+    ) -> Result<(), AccessControlError> {
         access_control::revoke_role(&env, caller, role, revokee)
     }
 
     /// Grant a permission to a role (allow role to perform action).
-    pub fn grant_permission(env: Env, caller: Address, role: Symbol, action: Symbol) -> Result<(), AccessControlError> {
+    pub fn grant_permission(
+        env: Env,
+        caller: Address,
+        role: Symbol,
+        action: Symbol,
+    ) -> Result<(), AccessControlError> {
         access_control::grant_permission(&env, caller, role, action)
     }
 
     /// Revoke a permission from a role.
-    pub fn revoke_permission(env: Env, caller: Address, role: Symbol, action: Symbol) -> Result<(), AccessControlError> {
+    pub fn revoke_permission(
+        env: Env,
+        caller: Address,
+        role: Symbol,
+        action: Symbol,
+    ) -> Result<(), AccessControlError> {
         access_control::revoke_permission(&env, caller, role, action)
     }
 
     /// Transfer admin privileges to a new address.
-    pub fn transfer_admin(env: Env, caller: Address, new_admin: Address) -> Result<(), AccessControlError> {
+    pub fn transfer_admin(
+        env: Env,
+        caller: Address,
+        new_admin: Address,
+    ) -> Result<(), AccessControlError> {
         access_control::transfer_admin(&env, caller, new_admin)
     }
 
@@ -1041,7 +1182,12 @@ impl NebulaNomadContract {
         gas_recovery::set_refund_percentage(&env, &admin, bps).unwrap();
     }
 
-    pub fn request_refund(env: Env, caller: Address, tx_hash: BytesN<32>, gas_used: u64) -> RefundRequest {
+    pub fn request_refund(
+        env: Env,
+        caller: Address,
+        tx_hash: BytesN<32>,
+        gas_used: u64,
+    ) -> RefundRequest {
         gas_recovery::request_refund(&env, &caller, tx_hash, gas_used).unwrap()
     }
 
@@ -1057,7 +1203,12 @@ impl NebulaNomadContract {
 
     pub fn post_bounty(env: Env, poster: Address, description: String, reward: i128) -> Bounty {
         let result = bounty_board::post_bounty(&env, &poster, description, reward).unwrap();
-        let _ = audit_logger::log_audit_event(&env, Some(&poster), symbol_short!("pb"), BytesN::from_array(&env, &[0u8; 128]));
+        let _ = audit_logger::log_audit_event(
+            &env,
+            Some(&poster),
+            symbol_short!("pb"),
+            BytesN::from_array(&env, &[0u8; 128]),
+        );
         result
     }
 
@@ -1065,7 +1216,12 @@ impl NebulaNomadContract {
         let result = bounty_board::claim_bounty(&env, &claimer, bounty_id, proof).unwrap();
         let mut b = [0u8; 128];
         b[0..8].copy_from_slice(&bounty_id.to_be_bytes());
-        let _ = audit_logger::log_audit_event(&env, Some(&claimer), symbol_short!("cb"), BytesN::from_array(&env, &b));
+        let _ = audit_logger::log_audit_event(
+            &env,
+            Some(&claimer),
+            symbol_short!("cb"),
+            BytesN::from_array(&env, &b),
+        );
         result
     }
 
@@ -1075,17 +1231,40 @@ impl NebulaNomadContract {
         recycling_crafter::initialize_recycling(&env);
     }
 
-    pub fn recycle_resource(env: Env, caller: Address, resource: Symbol, amount: u32) -> Vec<(Symbol, u32)> {
+    pub fn recycle_resource(
+        env: Env,
+        caller: Address,
+        resource: Symbol,
+        amount: u32,
+    ) -> Vec<(Symbol, u32)> {
         let result = recycling_crafter::recycle_resource(&env, &caller, resource, amount).unwrap();
-        let _ = audit_logger::log_audit_event(&env, Some(&caller), symbol_short!("rr"), BytesN::from_array(&env, &[0u8; 128]));
+        let _ = audit_logger::log_audit_event(
+            &env,
+            Some(&caller),
+            symbol_short!("rr"),
+            BytesN::from_array(&env, &[0u8; 128]),
+        );
         result
     }
 
-    pub fn craft_new_item(env: Env, caller: Address, recipe_id: u64, inputs: Vec<Symbol>, quantities: Vec<u32>) -> CraftingResult {
-        let result = recycling_crafter::craft_new_item(&env, &caller, recipe_id, inputs, quantities).unwrap();
+    pub fn craft_new_item(
+        env: Env,
+        caller: Address,
+        recipe_id: u64,
+        inputs: Vec<Symbol>,
+        quantities: Vec<u32>,
+    ) -> CraftingResult {
+        let result =
+            recycling_crafter::craft_new_item(&env, &caller, recipe_id, inputs, quantities)
+                .unwrap();
         let mut b = [0u8; 128];
         b[0..8].copy_from_slice(&recipe_id.to_be_bytes());
-        let _ = audit_logger::log_audit_event(&env, Some(&caller), symbol_short!("cn"), BytesN::from_array(&env, &b));
+        let _ = audit_logger::log_audit_event(
+            &env,
+            Some(&caller),
+            symbol_short!("cn"),
+            BytesN::from_array(&env, &b),
+        );
         result
     }
 
@@ -1119,7 +1298,8 @@ impl NebulaNomadContract {
         let result = ship_nft::batch_mint_ships(&env, &owner, &ship_types, &metadata);
         if result.is_ok() {
             let details = BytesN::from_array(&env, &[0u8; 128]);
-            let _ = audit_logger::log_audit_event(&env, Some(&owner), symbol_short!("bms"), details);
+            let _ =
+                audit_logger::log_audit_event(&env, Some(&owner), symbol_short!("bms"), details);
         }
         result
     }
@@ -1135,7 +1315,8 @@ impl NebulaNomadContract {
             let mut b = [0u8; 128];
             b[0..8].copy_from_slice(&ship_id.to_be_bytes());
             let details = BytesN::from_array(&env, &b);
-            let _ = audit_logger::log_audit_event(&env, Some(&new_owner), symbol_short!("to"), details);
+            let _ =
+                audit_logger::log_audit_event(&env, Some(&new_owner), symbol_short!("to"), details);
         }
         result
     }
@@ -1217,7 +1398,10 @@ impl NebulaNomadContract {
         layout: NebulaLayout,
         resource: Symbol,
         min_price: i128,
-    ) -> Result<(dex_integration::HarvestResult, dex_integration::DexOffer), dex_integration::HarvestError> {
+    ) -> Result<
+        (dex_integration::HarvestResult, dex_integration::DexOffer),
+        dex_integration::HarvestError,
+    > {
         dex_integration::harvest_and_list(&env, &player, ship_id, &layout, &resource, min_price)
     }
 
@@ -1228,6 +1412,56 @@ impl NebulaNomadContract {
         offer_id: u64,
     ) -> Result<dex_integration::DexOffer, dex_integration::HarvestError> {
         dex_integration::cancel_listing(&env, &owner, offer_id)
+    }
+
+    /// List `amount` units of an already-held resource on the DEX.
+    pub fn list_resource(
+        env: Env,
+        seller: Address,
+        resource: Symbol,
+        amount: u32,
+        min_price: i128,
+    ) -> Result<dex_integration::DexOffer, dex_integration::HarvestError> {
+        dex_integration::list_resource(&env, &seller, &resource, amount, min_price)
+    }
+
+    /// Buy `amount` units from a DEX offer, paying at most `max_price` per unit.
+    pub fn buy_offer(
+        env: Env,
+        buyer: Address,
+        offer_id: u64,
+        amount: u32,
+        max_price: i128,
+    ) -> Result<dex_integration::DexFill, dex_integration::HarvestError> {
+        dex_integration::buy_offer(&env, &buyer, offer_id, amount, max_price)
+    }
+
+    /// Sell `amount` units into an open buy limit order, receiving at least
+    /// `min_price` per unit.
+    pub fn sell_to_order(
+        env: Env,
+        seller: Address,
+        order_id: u64,
+        resource: Symbol,
+        amount: u32,
+        min_price: i128,
+    ) -> Result<dex_integration::DexFill, dex_integration::HarvestError> {
+        dex_integration::sell_to_order(&env, &seller, order_id, &resource, amount, min_price)
+    }
+
+    /// Read a DEX offer by ID.
+    pub fn get_dex_offer(env: Env, offer_id: u64) -> Option<dex_integration::DexOffer> {
+        dex_integration::get_offer(&env, offer_id)
+    }
+
+    /// Page through active DEX offers, optionally filtered by resource.
+    pub fn get_open_offers(
+        env: Env,
+        resource: Option<Symbol>,
+        start_after: u64,
+        limit: u32,
+    ) -> dex_integration::OfferPage {
+        dex_integration::get_open_offers(&env, resource.as_ref(), start_after, limit)
     }
 
     // ─── Treasure Vault ───────────────────────────────────────────────────
@@ -1243,7 +1477,12 @@ impl NebulaNomadContract {
         if result.is_ok() {
             let mut b = [0u8; 128];
             b[0..8].copy_from_slice(&ship_id.to_be_bytes());
-            let _ = audit_logger::log_audit_event(&env, Some(&owner), symbol_short!("dt"), BytesN::from_array(&env, &b));
+            let _ = audit_logger::log_audit_event(
+                &env,
+                Some(&owner),
+                symbol_short!("dt"),
+                BytesN::from_array(&env, &b),
+            );
         }
         result
     }
@@ -1254,7 +1493,12 @@ impl NebulaNomadContract {
         if result.is_ok() {
             let mut b = [0u8; 128];
             b[0..8].copy_from_slice(&vault_id.to_be_bytes());
-            let _ = audit_logger::log_audit_event(&env, Some(&owner), symbol_short!("ct"), BytesN::from_array(&env, &b));
+            let _ = audit_logger::log_audit_event(
+                &env,
+                Some(&owner),
+                symbol_short!("ct"),
+                BytesN::from_array(&env, &b),
+            );
         }
         result
     }
@@ -1333,6 +1577,15 @@ impl NebulaNomadContract {
         player_profile::get_profile(&env, profile_id)
     }
 
+    /// Load a single profile section so callers only pay for what they read.
+    pub fn load_profile_section(
+        env: Env,
+        profile_id: u64,
+        section: ProfileSection,
+    ) -> Result<ProfileSectionData, ProfileError> {
+        player_profile::load_profile_section(&env, profile_id, section)
+    }
+
     // ─── Onboarding Tutorial (Issue #139) ────────────────────────────────
 
     /// Initialize the onboarding system with an admin.
@@ -1351,7 +1604,11 @@ impl NebulaNomadContract {
     }
 
     /// Complete a tutorial step and earn rewards.
-    pub fn complete_tutorial_step(env: Env, player: Address, step_id: u32) -> Result<i128, OnboardingError> {
+    pub fn complete_tutorial_step(
+        env: Env,
+        player: Address,
+        step_id: u32,
+    ) -> Result<i128, OnboardingError> {
         onboarding_tutorial::complete_tutorial_step(&env, &player, step_id)
     }
 
@@ -1366,7 +1623,11 @@ impl NebulaNomadContract {
     }
 
     /// Admin function to set a custom tutorial path.
-    pub fn set_tutorial_path(env: Env, admin: Address, path: Vec<u32>) -> Result<(), OnboardingError> {
+    pub fn set_tutorial_path(
+        env: Env,
+        admin: Address,
+        path: Vec<u32>,
+    ) -> Result<(), OnboardingError> {
         onboarding_tutorial::set_tutorial_path(&env, &admin, path)
     }
 
@@ -1378,11 +1639,7 @@ impl NebulaNomadContract {
     }
 
     /// Close a session.
-    pub fn expire_session(
-        env: Env,
-        caller: Address,
-        session_id: u64,
-    ) -> Result<(), SessionError> {
+    pub fn expire_session(env: Env, caller: Address, session_id: u64) -> Result<(), SessionError> {
         session_manager::expire_session(&env, caller, session_id)
     }
 
@@ -1494,11 +1751,7 @@ impl NebulaNomadContract {
     }
 
     /// Apply a regeneration upgrade effect (called after a regen upgrade).
-    pub fn apply_regen_upgrade(
-        env: Env,
-        ship_id: u64,
-        bonus: u32,
-    ) -> Result<(), ShipUpgradeError> {
+    pub fn apply_regen_upgrade(env: Env, ship_id: u64, bonus: u32) -> Result<(), ShipUpgradeError> {
         ship_upgrade::apply_regen_upgrade(&env, ship_id, bonus)
     }
 
@@ -1643,10 +1896,7 @@ impl NebulaNomadContract {
     }
 
     /// The EMA-smoothed, volatility-clamped price the economy should use.
-    pub fn get_dynamic_price(
-        env: Env,
-        resource: Symbol,
-    ) -> Result<DynamicPrice, PricingError> {
+    pub fn get_dynamic_price(env: Env, resource: Symbol) -> Result<DynamicPrice, PricingError> {
         dynamic_pricing::dynamic_price(&env, resource)
     }
 
@@ -1668,7 +1918,14 @@ impl NebulaNomadContract {
         ship_id: u64,
         layout: NebulaLayout,
         resource: Symbol,
-    ) -> Result<(crate::resource_minter::HarvestResult, crate::resource_minter::DexOffer, i128), DynamicListError> {
+    ) -> Result<
+        (
+            crate::resource_minter::HarvestResult,
+            crate::resource_minter::DexOffer,
+            i128,
+        ),
+        DynamicListError,
+    > {
         dex_integration::list_at_market(&env, &player, ship_id, &layout, &resource)
     }
 
@@ -1833,7 +2090,8 @@ impl NebulaNomadContract {
     pub fn simulate_conditions(
         env: Env,
         nebula_id: u64,
-    ) -> Result<environment_simulator::EnvironmentCondition, environment_simulator::EnvironmentError> {
+    ) -> Result<environment_simulator::EnvironmentCondition, environment_simulator::EnvironmentError>
+    {
         environment_simulator::simulate_conditions(&env, nebula_id)
     }
 
@@ -1843,7 +2101,8 @@ impl NebulaNomadContract {
         ship_id: u64,
         nebula_id: u64,
         base_yield: i32,
-    ) -> Result<environment_simulator::ModifierResult, environment_simulator::EnvironmentError> {
+    ) -> Result<environment_simulator::ModifierResult, environment_simulator::EnvironmentError>
+    {
         environment_simulator::apply_environmental_modifier(&env, ship_id, nebula_id, base_yield)
     }
 
@@ -1955,7 +2214,11 @@ impl NebulaNomadContract {
     }
 
     /// Admin-only emergency recovery of stuck resources.
-    pub fn emergency_withdraw(env: Env, admin: Address, resource: Symbol) -> Result<(), EmergencyError> {
+    pub fn emergency_withdraw(
+        env: Env,
+        admin: Address,
+        resource: Symbol,
+    ) -> Result<(), EmergencyError> {
         emergency_controls::emergency_withdraw(&env, &admin, resource)
     }
 
@@ -1972,7 +2235,12 @@ impl NebulaNomadContract {
     // ─── Metadata URI Resolver (Issue #30) ───────────────────────────────
 
     /// Set the IPFS CID for a token. Immutable after first set.
-    pub fn set_metadata_uri(env: Env, caller: Address, token_id: u64, cid: Bytes) -> Result<(), MetadataError> {
+    pub fn set_metadata_uri(
+        env: Env,
+        caller: Address,
+        token_id: u64,
+        cid: Bytes,
+    ) -> Result<(), MetadataError> {
         metadata_resolver::set_metadata_uri(&env, &caller, token_id, cid)
     }
 
@@ -1982,7 +2250,10 @@ impl NebulaNomadContract {
     }
 
     /// Batch resolve metadata for up to 10 tokens.
-    pub fn batch_resolve_metadata(env: Env, token_ids: Vec<u64>) -> Result<Vec<TokenMetadata>, MetadataError> {
+    pub fn batch_resolve_metadata(
+        env: Env,
+        token_ids: Vec<u64>,
+    ) -> Result<Vec<TokenMetadata>, MetadataError> {
         metadata_resolver::batch_resolve_metadata(&env, token_ids)
     }
 
@@ -1999,12 +2270,20 @@ impl NebulaNomadContract {
     // ─── Batch Ship Operations (Issue #31) ───────────────────────────────
 
     /// Stage up to 8 ship operations into the player's batch queue.
-    pub fn queue_batch_operation(env: Env, player: Address, operations: Vec<BatchOp>) -> Result<u32, BatchError> {
+    pub fn queue_batch_operation(
+        env: Env,
+        player: Address,
+        operations: Vec<BatchOp>,
+    ) -> Result<u32, BatchError> {
         batch_processor::queue_batch_operation(&env, &player, operations)
     }
 
     /// Execute all queued operations atomically for the provided ship IDs.
-    pub fn execute_batch(env: Env, player: Address, ship_ids: Vec<u64>) -> Result<BatchResult, BatchError> {
+    pub fn execute_batch(
+        env: Env,
+        player: Address,
+        ship_ids: Vec<u64>,
+    ) -> Result<BatchResult, BatchError> {
         batch_processor::execute_batch(&env, &player, ship_ids)
     }
 
@@ -2018,7 +2297,7 @@ impl NebulaNomadContract {
         batch_processor::clear_batch(&env, &player)
     }
 
-// ─── On-chain Audit Logging (Issue #64) ───────────────────────────────
+    // ─── On-chain Audit Logging (Issue #64) ───────────────────────────────
 
     pub fn log_audit_event(
         env: Env,
@@ -2029,12 +2308,41 @@ impl NebulaNomadContract {
         audit_logger::log_audit_event(&env, actor.as_ref(), action, details)
     }
 
-    pub fn query_audit_logs(env: Env, filter: Symbol, limit: u32) -> Result<Vec<AuditEntry>, AuditLoggerError> {
+    pub fn query_audit_logs(
+        env: Env,
+        filter: Symbol,
+        limit: u32,
+    ) -> Result<Vec<AuditEntry>, AuditLoggerError> {
         audit_logger::query_audit_logs(&env, filter, limit)
     }
 
     pub fn get_audit_count(env: Env) -> u64 {
         audit_logger::get_audit_count(&env)
+    }
+
+    /// Number of audit entries currently stored (after pruning).
+    pub fn get_retained_audit_count(env: Env) -> u64 {
+        audit_logger::get_retained_audit_count(&env)
+    }
+
+    /// Active audit-log retention policy.
+    pub fn get_audit_retention(env: Env) -> RetentionPolicy {
+        audit_logger::get_audit_retention(&env)
+    }
+
+    /// Replace the audit-log retention policy. Admin role required.
+    pub fn set_audit_retention(
+        env: Env,
+        admin: Address,
+        policy: RetentionPolicy,
+    ) -> Result<(), AuditLoggerError> {
+        audit_logger::set_audit_retention(&env, &admin, &policy)
+    }
+
+    /// Delete expired cache entries in `namespaces` and audit entries outside
+    /// the retention policy. Permissionless and bounded per call.
+    pub fn prune_expired_data(env: Env, namespaces: Vec<Symbol>) -> Result<PruneReport, StorageError> {
+        storage_optim::prune_expired_data(&env, &namespaces)
     }
 
     // ─── Sustainability and Carbon Tracking (Issue #68) ──────────────────
@@ -2044,8 +2352,8 @@ impl NebulaNomadContract {
         player: Address,
         gas_used: u64,
     ) -> FootprintRecord {
-        let record = sustainability_metrics::record_transaction_footprint(&env, &player, gas_used)
-            .unwrap();
+        let record =
+            sustainability_metrics::record_transaction_footprint(&env, &player, gas_used).unwrap();
         let mut details_bytes = [0u8; 128];
         details_bytes[0..8].copy_from_slice(&record.gas_used.to_be_bytes());
         let details = BytesN::from_array(&env, &details_bytes);
@@ -2053,12 +2361,8 @@ impl NebulaNomadContract {
         record
     }
 
-    pub fn claim_sustainability_reward(
-        env: Env,
-        player: Address,
-    ) -> i128 {
-        let reward = sustainability_metrics::claim_sustainability_reward(&env, &player)
-            .unwrap();
+    pub fn claim_sustainability_reward(env: Env, player: Address) -> i128 {
+        let reward = sustainability_metrics::claim_sustainability_reward(&env, &player).unwrap();
         let mut details_bytes = [0u8; 128];
         details_bytes[0..8].copy_from_slice(&(reward as i64).to_be_bytes());
         let details = BytesN::from_array(&env, &details_bytes);
@@ -2072,13 +2376,8 @@ impl NebulaNomadContract {
 
     // ─── Cosmic Anomaly Classification Engine (Issue #70) ────────────────
 
-    pub fn classify_anomaly(
-        env: Env,
-        anomaly_id: u64,
-        features: Vec<u32>,
-    ) -> ClassificationRecord {
-        anomaly_classifier::classify_anomaly(&env, anomaly_id, features)
-            .unwrap()
+    pub fn classify_anomaly(env: Env, anomaly_id: u64, features: Vec<u32>) -> ClassificationRecord {
+        anomaly_classifier::classify_anomaly(&env, anomaly_id, features).unwrap()
     }
 
     pub fn refine_classification(
@@ -2086,14 +2385,10 @@ impl NebulaNomadContract {
         anomaly_id: u64,
         new_data: Vec<u32>,
     ) -> ClassificationRecord {
-        anomaly_classifier::refine_classification(&env, anomaly_id, new_data)
-            .unwrap()
+        anomaly_classifier::refine_classification(&env, anomaly_id, new_data).unwrap()
     }
 
-    pub fn classify_batch(
-        env: Env,
-        items: Vec<(u64, Vec<u32>)>,
-    ) -> Vec<ClassificationRecord> {
+    pub fn classify_batch(env: Env, items: Vec<(u64, Vec<u32>)>) -> Vec<ClassificationRecord> {
         anomaly_classifier::classify_batch(&env, items)
     }
 
@@ -2107,7 +2402,7 @@ impl NebulaNomadContract {
         shared_lib::validate_address(&env, auth)
     }
 
-    pub fn calculate_yield(env: Env, base: i128, multiplier: u32) -> Result<i128, SharedError> {
+    pub fn calculate_yield(_env: Env, base: i128, multiplier: u32) -> Result<i128, SharedError> {
         shared_lib::calculate_yield(base, multiplier)
     }
 
@@ -2128,10 +2423,7 @@ impl NebulaNomadContract {
     }
 
     /// Retrieve an optimized storage entry.
-    pub fn get_optimized_entry(
-        env: Env,
-        key: Symbol,
-    ) -> Result<OptimizedEntry, StorageError> {
+    pub fn get_optimized_entry(env: Env, key: Symbol) -> Result<OptimizedEntry, StorageError> {
         storage_optim::get_optimized_entry(&env, key)
     }
 
@@ -2214,10 +2506,7 @@ impl NebulaNomadContract {
     }
 
     /// Get a snapshot by ID.
-    pub fn get_snapshot(
-        env: Env,
-        snapshot_id: u64,
-    ) -> Result<StateSnapshot, SnapshotError> {
+    pub fn get_snapshot(env: Env, snapshot_id: u64) -> Result<StateSnapshot, SnapshotError> {
         state_snapshot::get_snapshot(&env, snapshot_id)
     }
 
@@ -2238,7 +2527,6 @@ impl NebulaNomadContract {
     /// Reset snapshot session counter for a ship.
     pub fn reset_session_count(env: Env, ship_id: u64) {
         state_snapshot::reset_session_count(&env, ship_id)
-
     }
 
     // ─── Prize Distributor (Issue #62) ───────────────────────────────────
@@ -2371,11 +2659,7 @@ impl NebulaNomadContract {
     }
 
     /// Dissolve an entanglement pair.
-    pub fn dissolve_pair(
-        env: Env,
-        caller: Address,
-        pair_id: u64,
-    ) -> Result<(), EntanglementError> {
+    pub fn dissolve_pair(env: Env, caller: Address, pair_id: u64) -> Result<(), EntanglementError> {
         entanglement_comms::dissolve_pair(&env, &caller, pair_id)
     }
 
@@ -2399,7 +2683,13 @@ impl NebulaNomadContract {
         total_amount: u32,
         shares: u32,
     ) -> Result<Vec<u64>, FractionalError> {
-        fractional_resources::fractionalize_resource(&env, &owner, resource_type, total_amount, shares)
+        fractional_resources::fractionalize_resource(
+            &env,
+            &owner,
+            resource_type,
+            total_amount,
+            shares,
+        )
     }
 
     /// Merge fractional shares back into a whole resource.
@@ -2522,7 +2812,13 @@ impl NebulaNomadContract {
         trend_weight: u32,
         volatility_adjustment: u32,
     ) -> Result<ModelParams, ForecastError> {
-        yield_forecast::update_model_params(&env, &admin, moving_average_window, trend_weight, volatility_adjustment)
+        yield_forecast::update_model_params(
+            &env,
+            &admin,
+            moving_average_window,
+            trend_weight,
+            volatility_adjustment,
+        )
     }
 
     // ─── Inter-Nebula Wormhole Travel System (Issue #77) ─────────────────────
@@ -2534,13 +2830,19 @@ impl NebulaNomadContract {
         origin_nebula: u64,
         destination: u64,
     ) -> Result<u64, WormholeError> {
-        let result = wormhole_traveler::open_wormhole(&env, creator.clone(), origin_nebula, destination);
+        let result =
+            wormhole_traveler::open_wormhole(&env, creator.clone(), origin_nebula, destination);
         if result.is_ok() {
             let mut details = [0u8; 128];
             details[0..8].copy_from_slice(&origin_nebula.to_be_bytes());
             details[8..16].copy_from_slice(&destination.to_be_bytes());
             let details_bytes = BytesN::from_array(&env, &details);
-            let _ = audit_logger::log_audit_event(&env, Some(&creator), symbol_short!("ow"), details_bytes);
+            let _ = audit_logger::log_audit_event(
+                &env,
+                Some(&creator),
+                symbol_short!("ow"),
+                details_bytes,
+            );
         }
         result
     }
@@ -2552,13 +2854,19 @@ impl NebulaNomadContract {
         ship_id: u64,
         wormhole_id: u64,
     ) -> Result<TravelRecord, WormholeError> {
-        let result = wormhole_traveler::traverse_wormhole(&env, traveler.clone(), ship_id, wormhole_id);
+        let result =
+            wormhole_traveler::traverse_wormhole(&env, traveler.clone(), ship_id, wormhole_id);
         if result.is_ok() {
             let mut details = [0u8; 128];
             details[0..8].copy_from_slice(&ship_id.to_be_bytes());
             details[8..16].copy_from_slice(&wormhole_id.to_be_bytes());
             let details_bytes = BytesN::from_array(&env, &details);
-            let _ = audit_logger::log_audit_event(&env, Some(&traveler), symbol_short!("tw"), details_bytes);
+            let _ = audit_logger::log_audit_event(
+                &env,
+                Some(&traveler),
+                symbol_short!("tw"),
+                details_bytes,
+            );
         }
         result
     }
@@ -2589,7 +2897,7 @@ impl NebulaNomadContract {
     }
 
     /// Calculate travel cost between two nebulae.
-    pub fn calculate_travel_cost(env: Env, origin_nebula: u64, destination: u64) -> u32 {
+    pub fn calculate_travel_cost(_env: Env, origin_nebula: u64, destination: u64) -> u32 {
         wormhole_traveler::calculate_travel_cost(origin_nebula, destination)
     }
 
@@ -2601,11 +2909,7 @@ impl NebulaNomadContract {
     // ─── Player Alliance and Faction System (Issue #79) ──────────────────
 
     /// Found a new alliance with initial treasury.
-    pub fn found_alliance(
-        env: Env,
-        founder: Address,
-        name: String,
-    ) -> Result<u64, AllianceError> {
+    pub fn found_alliance(env: Env, founder: Address, name: String) -> Result<u64, AllianceError> {
         let result = alliance_manager::found_alliance(&env, founder.clone(), name);
         if result.is_ok() {
             let mut details = [0u8; 128];
@@ -2613,7 +2917,12 @@ impl NebulaNomadContract {
                 details[0..8].copy_from_slice(&alliance_id.to_be_bytes());
             }
             let details_bytes = BytesN::from_array(&env, &details);
-            let _ = audit_logger::log_audit_event(&env, Some(&founder), symbol_short!("fa"), details_bytes);
+            let _ = audit_logger::log_audit_event(
+                &env,
+                Some(&founder),
+                symbol_short!("fa"),
+                details_bytes,
+            );
         }
         result
     }
@@ -2629,7 +2938,12 @@ impl NebulaNomadContract {
             let mut details = [0u8; 128];
             details[0..8].copy_from_slice(&alliance_id.to_be_bytes());
             let details_bytes = BytesN::from_array(&env, &details);
-            let _ = audit_logger::log_audit_event(&env, Some(&player), symbol_short!("ja"), details_bytes);
+            let _ = audit_logger::log_audit_event(
+                &env,
+                Some(&player),
+                symbol_short!("ja"),
+                details_bytes,
+            );
         }
         result
     }
@@ -2849,11 +3163,7 @@ impl NebulaNomadContract {
 
     /// Dijkstra shortest-fuel-cost route between two nebulae (≤ 12 hops).
     /// Emits RouteCalculated event on success.
-    pub fn calculate_optimal_route(
-        env: Env,
-        start: u64,
-        dest: u64,
-    ) -> Result<NavPath, NavError> {
+    pub fn calculate_optimal_route(env: Env, start: u64, dest: u64) -> Result<NavPath, NavError> {
         navigation_planner::calculate_optimal_route(&env, start, dest)
     }
 
@@ -2870,6 +3180,49 @@ impl NebulaNomadContract {
     /// Return the single directed edge from `from` to `to`, if it exists.
     pub fn get_nav_connection(env: Env, from: u64, to: u64) -> Option<RouteEdge> {
         navigation_planner::get_connection(&env, from, to)
+    }
+
+    // ─── Standardized event framework ────────────────────────────────────
+
+    /// Seed the default schemas and remember the framework admin.
+    pub fn init_event_framework(env: Env, admin: Address) {
+        event_framework::init_event_framework(&env, &admin)
+    }
+
+    /// Register (or re-version) the schema for one event type.
+    pub fn register_event_schema(
+        env: Env,
+        admin: Address,
+        event_type: Symbol,
+        version: u32,
+    ) -> Result<(), EventFrameworkError> {
+        event_framework::register_event_schema(&env, &admin, &event_type, version)
+    }
+
+    /// Persist one schema-versioned event record and publish it.
+    pub fn emit_standard_event(
+        env: Env,
+        caller: Address,
+        event_type: Symbol,
+        payload: BytesN<256>,
+    ) -> Result<u64, EventFrameworkError> {
+        event_framework::emit_standard_event(&env, &caller, event_type, payload)
+    }
+
+    /// Persist up to `MAX_BURST_EVENTS` records and publish a single batched
+    /// event for the whole burst.
+    pub fn emit_standard_event_burst(
+        env: Env,
+        caller: Address,
+        event_type: Symbol,
+        payloads: Vec<BytesN<256>>,
+    ) -> Result<u32, EventFrameworkError> {
+        event_framework::emit_standard_event_burst(&env, &caller, event_type, payloads)
+    }
+
+    /// Most recent records of `filter` (`all` for every type), newest first.
+    pub fn query_recent_events(env: Env, filter: Symbol, limit: u32) -> Vec<StandardEvent> {
+        event_framework::query_recent_events(&env, &filter, limit)
     }
 
     // ─── Automated Community Event Scheduler ──────────────────────────────
@@ -2891,10 +3244,7 @@ impl NebulaNomadContract {
     }
 
     /// Trigger a scheduled event when its time arrives.
-    pub fn trigger_scheduled_event(
-        env: Env,
-        event_id: u64,
-    ) -> Result<EventResult, EventError> {
+    pub fn trigger_scheduled_event(env: Env, event_id: u64) -> Result<EventResult, EventError> {
         event_scheduler::trigger_scheduled_event(&env, event_id)
     }
 
@@ -2918,11 +3268,7 @@ impl NebulaNomadContract {
     }
 
     /// Cancel a scheduled event (admin only).
-    pub fn cancel_event(
-        env: Env,
-        admin: Address,
-        event_id: u64,
-    ) -> Result<(), EventError> {
+    pub fn cancel_event(env: Env, admin: Address, event_id: u64) -> Result<(), EventError> {
         event_scheduler::cancel_event(&env, &admin, event_id)
     }
 
@@ -2979,7 +3325,11 @@ impl NebulaNomadContract {
     }
 
     /// Admin: cancel a scheduled or active seasonal event.
-    pub fn cancel_seasonal_event(env: Env, admin: Address, event_id: u64) -> Result<(), EventError> {
+    pub fn cancel_seasonal_event(
+        env: Env,
+        admin: Address,
+        event_id: u64,
+    ) -> Result<(), EventError> {
         event_scheduler::cancel_seasonal_event(&env, &admin, event_id)
     }
 
@@ -3058,10 +3408,23 @@ impl NebulaNomadContract {
         color_secondary: u32,
         metadata: Bytes,
     ) -> Result<ShipSkin, SkinError> {
-        ship_customization::mint_skin(&env, &owner, name, rarity, color_primary, color_secondary, metadata)
+        ship_customization::mint_skin(
+            &env,
+            &owner,
+            name,
+            rarity,
+            color_primary,
+            color_secondary,
+            metadata,
+        )
     }
 
-    pub fn apply_skin(env: Env, owner: Address, ship_id: u64, skin_id: u64) -> Result<(), SkinError> {
+    pub fn apply_skin(
+        env: Env,
+        owner: Address,
+        ship_id: u64,
+        skin_id: u64,
+    ) -> Result<(), SkinError> {
         ship_customization::apply_skin(&env, &owner, ship_id, skin_id)
     }
 
@@ -3073,7 +3436,11 @@ impl NebulaNomadContract {
         ship_customization::get_owner_skins(&env, &owner)
     }
 
-    pub fn transfer_skin(env: Env, skin_id: u64, new_owner: Address) -> Result<ShipSkin, SkinError> {
+    pub fn transfer_skin(
+        env: Env,
+        skin_id: u64,
+        new_owner: Address,
+    ) -> Result<ShipSkin, SkinError> {
         ship_customization::transfer_skin(&env, skin_id, &new_owner)
     }
 
@@ -3094,7 +3461,13 @@ impl NebulaNomadContract {
         circulating_supply: i128,
         staked_supply: i128,
     ) {
-        economics::monitor::update_supply_metrics(&env, &admin, total_supply, circulating_supply, staked_supply)
+        economics::monitor::update_supply_metrics(
+            &env,
+            &admin,
+            total_supply,
+            circulating_supply,
+            staked_supply,
+        )
     }
 
     pub fn track_resource_activity(
@@ -3119,11 +3492,19 @@ impl NebulaNomadContract {
         economics::monitor::calculate_inflation_rate(&env, old_supply, new_supply)
     }
 
-    pub fn detect_economic_imbalance(env: Env, resource_type: Symbol, supply: i128, demand: i128) -> SupplyDemandRatio {
+    pub fn detect_economic_imbalance(
+        env: Env,
+        resource_type: Symbol,
+        supply: i128,
+        demand: i128,
+    ) -> SupplyDemandRatio {
         economics::balancer::detect_imbalance(&env, resource_type, supply, demand)
     }
 
-    pub fn suggest_balance_adjustment(env: Env, resource_type: Symbol) -> Option<BalanceAdjustment> {
+    pub fn suggest_balance_adjustment(
+        env: Env,
+        resource_type: Symbol,
+    ) -> Option<BalanceAdjustment> {
         economics::balancer::suggest_adjustment(&env, resource_type)
     }
 
@@ -3175,11 +3556,19 @@ impl NebulaNomadContract {
 
     // ─── Trading System ───────────────────────────────────────────────────
 
-    pub fn place_limit_order(env: Env, trader: Address, order: LimitOrder) -> Result<u64, TradingError> {
+    pub fn place_limit_order(
+        env: Env,
+        trader: Address,
+        order: LimitOrder,
+    ) -> Result<u64, TradingError> {
         trading::place_limit_order(&env, &trader, order)
     }
 
-    pub fn cancel_limit_order(env: Env, trader: Address, order_id: u64) -> Result<(), TradingError> {
+    pub fn cancel_limit_order(
+        env: Env,
+        trader: Address,
+        order_id: u64,
+    ) -> Result<(), TradingError> {
         trading::cancel_limit_order(&env, &trader, order_id)
     }
 
@@ -3309,7 +3698,10 @@ impl NebulaNomadContract {
         reputation::get_reputation_score(&env, &player)
     }
 
-    pub fn get_player_reputation_details(env: Env, player: Address) -> Result<ReputationScore, ReputationError> {
+    pub fn get_player_reputation_details(
+        env: Env,
+        player: Address,
+    ) -> Result<ReputationScore, ReputationError> {
         reputation::get_reputation_details(&env, &player)
     }
 
@@ -3343,7 +3735,11 @@ impl NebulaNomadContract {
         reputation::resolve_report(&env, &admin, report_id, resolved)
     }
 
-    pub fn ban_player_account(env: Env, admin: Address, player: Address) -> Result<(), ReputationError> {
+    pub fn ban_player_account(
+        env: Env,
+        admin: Address,
+        player: Address,
+    ) -> Result<(), ReputationError> {
         reputation::ban_player(&env, &admin, &player)
     }
 
