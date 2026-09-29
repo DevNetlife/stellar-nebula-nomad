@@ -31,10 +31,8 @@ fn test_check_binding_status() {
     let owner = Address::generate(&env);
     let ship_id = 2u64;
 
-    let status = stellar_nebula_nomad::NebulaNomadContract::check_binding_status(
-        env.clone(),
-        ship_id,
-    );
+    let status =
+        stellar_nebula_nomad::NebulaNomadContract::check_binding_status(env.clone(), ship_id);
     assert!(status.is_none());
 
     stellar_nebula_nomad::NebulaNomadContract::bind_ship_to_owner(
@@ -44,10 +42,8 @@ fn test_check_binding_status() {
     )
     .unwrap();
 
-    let status = stellar_nebula_nomad::NebulaNomadContract::check_binding_status(
-        env.clone(),
-        ship_id,
-    );
+    let status =
+        stellar_nebula_nomad::NebulaNomadContract::check_binding_status(env.clone(), ship_id);
     assert!(status.is_some());
     assert_eq!(status.unwrap().bound_to, owner);
 }
@@ -86,11 +82,8 @@ fn test_is_bound_to() {
     let other = Address::generate(&env);
     let ship_id = 4u64;
 
-    let is_bound = stellar_nebula_nomad::NebulaNomadContract::is_bound_to(
-        env.clone(),
-        ship_id,
-        owner.clone(),
-    );
+    let is_bound =
+        stellar_nebula_nomad::NebulaNomadContract::is_bound_to(env.clone(), ship_id, owner.clone());
     assert!(!is_bound);
 
     stellar_nebula_nomad::NebulaNomadContract::bind_ship_to_owner(
@@ -100,18 +93,12 @@ fn test_is_bound_to() {
     )
     .unwrap();
 
-    let is_bound_owner = stellar_nebula_nomad::NebulaNomadContract::is_bound_to(
-        env.clone(),
-        ship_id,
-        owner.clone(),
-    );
+    let is_bound_owner =
+        stellar_nebula_nomad::NebulaNomadContract::is_bound_to(env.clone(), ship_id, owner.clone());
     assert!(is_bound_owner);
 
-    let is_bound_other = stellar_nebula_nomad::NebulaNomadContract::is_bound_to(
-        env.clone(),
-        ship_id,
-        other,
-    );
+    let is_bound_other =
+        stellar_nebula_nomad::NebulaNomadContract::is_bound_to(env.clone(), ship_id, other);
     assert!(!is_bound_other);
 }
 
@@ -160,11 +147,8 @@ fn test_batch_bind_exceeds_limit() {
         ship_ids.push_back(20 + i);
     }
 
-    let result = stellar_nebula_nomad::NebulaNomadContract::batch_bind_ships(
-        env.clone(),
-        owner,
-        ship_ids,
-    );
+    let result =
+        stellar_nebula_nomad::NebulaNomadContract::batch_bind_ships(env.clone(), owner, ship_ids);
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err(), BindingError::BurstLimitExceeded);
@@ -195,10 +179,7 @@ fn test_binding_is_immutable() {
     assert!(result.is_err());
     assert_eq!(result.unwrap_err(), BindingError::AlreadyBound);
 
-    let is_bound_owner1 = stellar_nebula_nomad::NebulaNomadContract::is_bound_to(
-        env.clone(),
-        ship_id,
-        owner1,
-    );
+    let is_bound_owner1 =
+        stellar_nebula_nomad::NebulaNomadContract::is_bound_to(env.clone(), ship_id, owner1);
     assert!(is_bound_owner1);
 }

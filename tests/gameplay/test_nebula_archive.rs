@@ -6,7 +6,7 @@ use stellar_nebula_nomad::{ArchiveError, NebulaArchive, NebulaLayout};
 fn create_mock_layout(env: &Env, size: u32) -> NebulaLayout {
     let anomalies = Vec::new(env);
     let layout_hash = BytesN::from_array(env, &[1u8; 32]);
-    
+
     NebulaLayout {
         anomalies,
         layout_hash,
@@ -31,11 +31,8 @@ fn test_archive_and_replay() {
 
     assert_eq!(archive_id, 1);
 
-    let archived = stellar_nebula_nomad::NebulaNomadContract::replay_archive(
-        env.clone(),
-        archive_id,
-    )
-    .unwrap();
+    let archived =
+        stellar_nebula_nomad::NebulaNomadContract::replay_archive(env.clone(), archive_id).unwrap();
 
     assert_eq!(archived.archive_id, 1);
     assert_eq!(archived.nebula_hash, layout_hash);
@@ -63,11 +60,9 @@ fn test_batch_archive_layouts() {
         layouts.push_back(create_mock_layout(&env, i + 1));
     }
 
-    let archive_ids = stellar_nebula_nomad::NebulaNomadContract::batch_archive_layouts(
-        env.clone(),
-        layouts,
-    )
-    .unwrap();
+    let archive_ids =
+        stellar_nebula_nomad::NebulaNomadContract::batch_archive_layouts(env.clone(), layouts)
+            .unwrap();
 
     assert_eq!(archive_ids.len(), 5);
     assert_eq!(archive_ids.get(0).unwrap(), 1);
@@ -87,10 +82,8 @@ fn test_batch_archive_exceeds_limit() {
         layouts.push_back(create_mock_layout(&env, i + 1));
     }
 
-    let result = stellar_nebula_nomad::NebulaNomadContract::batch_archive_layouts(
-        env.clone(),
-        layouts,
-    );
+    let result =
+        stellar_nebula_nomad::NebulaNomadContract::batch_archive_layouts(env.clone(), layouts);
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err(), ArchiveError::BurstLimitExceeded);
@@ -104,17 +97,13 @@ fn test_get_archive_by_hash() {
     let layout = create_mock_layout(&env, 15);
     let layout_hash = layout.layout_hash.clone();
 
-    let archive_id = stellar_nebula_nomad::NebulaNomadContract::archive_nebula_layout(
-        env.clone(),
-        layout,
-    )
-    .unwrap();
+    let archive_id =
+        stellar_nebula_nomad::NebulaNomadContract::archive_nebula_layout(env.clone(), layout)
+            .unwrap();
 
-    let archived = stellar_nebula_nomad::NebulaNomadContract::get_archive_by_hash(
-        env.clone(),
-        layout_hash,
-    )
-    .unwrap();
+    let archived =
+        stellar_nebula_nomad::NebulaNomadContract::get_archive_by_hash(env.clone(), layout_hash)
+            .unwrap();
 
     assert_eq!(archived.archive_id, archive_id);
     assert_eq!(archived.layout.size, 15);

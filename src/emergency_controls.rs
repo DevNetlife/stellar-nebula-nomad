@@ -86,10 +86,7 @@ fn require_admin(env: &Env, caller: &Address) -> Result<(), EmergencyError> {
 ///
 /// Must be called exactly once. `admins` must contain at least one address.
 /// Each admin must authorize this call.
-pub fn initialize_admins(
-    env: &Env,
-    admins: Vec<Address>,
-) -> Result<(), EmergencyError> {
+pub fn initialize_admins(env: &Env, admins: Vec<Address>) -> Result<(), EmergencyError> {
     if env.storage().instance().has(&EmergencyKey::Admins) {
         return Err(EmergencyError::AlreadyInitialized);
     }

@@ -463,7 +463,7 @@ pub fn create_automated_backup(
     caller.require_auth();
 
     let now = env.ledger().timestamp();
-    
+
     // Check if backup interval has elapsed
     let last_backup: u64 = env
         .storage()
@@ -506,7 +506,7 @@ pub fn create_automated_backup(
     env.storage()
         .persistent()
         .set(&SnapshotKey::AutomatedBackup(backup_id), &backup);
-    
+
     env.storage().persistent().extend_ttl(
         &SnapshotKey::AutomatedBackup(backup_id),
         SNAPSHOT_TTL,
@@ -519,7 +519,7 @@ pub fn create_automated_backup(
         .persistent()
         .get(&SnapshotKey::BackupList)
         .unwrap_or_else(|| Vec::new(env));
-    
+
     backup_list.push_back(backup_id);
 
     // Prune old backups if limit exceeded
@@ -689,10 +689,11 @@ fn compute_backup_hash(
 /// Compute checksum for exported state.
 fn compute_export_checksum(env: &Env, backup_id: u64, storage_uri: &Symbol) -> BytesN<32> {
     let mut data = soroban_sdk::Bytes::new(env);
-    data.append(&soroban_sdk::Bytes::from_slice(env, &backup_id.to_be_bytes()));
+    data.append(&soroban_sdk::Bytes::from_slice(
+        env,
+        &backup_id.to_be_bytes(),
+    ));
     data.append(&storage_uri.clone().to_xdr(env));
 
-    env.crypto()
-        .sha256(&data)
-        .to_bytes()
+    env.crypto().sha256(&data).to_bytes()
 }

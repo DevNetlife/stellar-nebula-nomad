@@ -130,9 +130,9 @@ fn quick_scan_preview_explorer_rarity_and_energy() {
     let preview = client.get_quick_scan_preview(&ship.id);
     assert_eq!(preview.ship_id, ship.id);
     assert_eq!(preview.scanner_power, 50);
-    assert_eq!(preview.estimated_energy_min, 50 * 3);  // 150
-    assert_eq!(preview.estimated_energy_max, 50 * 8);  // 400
-    assert_eq!(preview.predicted_rarity_index, 2);     // Rare
+    assert_eq!(preview.estimated_energy_min, 50 * 3); // 150
+    assert_eq!(preview.estimated_energy_max, 50 * 8); // 400
+    assert_eq!(preview.predicted_rarity_index, 2); // Rare
 }
 
 /// Fighter (scanner_power=20) gets Uncommon rarity (index 1).

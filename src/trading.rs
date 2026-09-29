@@ -231,7 +231,7 @@ fn cancel_limit_order_unguarded(
         .remove(&TradingKey::Order(order_id));
 
     // Remove from trader's order list
-    let mut ids: Vec<u64> = env
+    let ids: Vec<u64> = env
         .storage()
         .persistent()
         .get(&TradingKey::TraderOrders(trader.clone()))

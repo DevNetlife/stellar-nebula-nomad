@@ -1,7 +1,7 @@
 //! On-chain gameplay metrics aggregation and queries.
 //!
-use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Vec};
 use crate::error_standard::{ErrorDescriptor, ErrorKind, StandardContractError};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, Vec};
 
 // ── Error ─────────────────────────────────────────────────────────────────────
 
@@ -338,7 +338,7 @@ mod tests {
 
     fn make_env() -> (Env, soroban_sdk::Address) {
         let env = Env::default();
-        let id = env.register_contract(None, Stub);
+        let id = env.register(Stub, ());
         (env, id)
     }
 

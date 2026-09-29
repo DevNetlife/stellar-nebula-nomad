@@ -1,7 +1,7 @@
 //! Battle-pass seasons, tiers, and reward claims.
 //!
-use soroban_sdk::{contracttype, contracterror, symbol_short, Address, Env, String, Symbol, Vec};
 use crate::seasons::get_current_season;
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Env, String, Symbol, Vec};
 
 // ─── XP Constants ─────────────────────────────────────────────────────────────
 
@@ -121,12 +121,12 @@ pub struct SeasonalCosmetic {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum BattlePassError {
-    NotEnoughXP        = 1,
-    AlreadyClaimed     = 2,
-    InvalidTier        = 3,
-    NoActiveSeason     = 4,
-    PremiumRequired    = 5,
-    TierOutOfRange     = 6,
+    NotEnoughXP = 1,
+    AlreadyClaimed = 2,
+    InvalidTier = 3,
+    NoActiveSeason = 4,
+    PremiumRequired = 5,
+    TierOutOfRange = 6,
     /// XP for this challenge was already granted to this player.
     ChallengeXpAlreadyGranted = 7,
 }
@@ -164,15 +164,18 @@ pub fn add_xp(
     let key = BattlePassKey::State(profile_id, season.id);
 
     let mut state: BattlePassState =
-        env.storage().persistent().get(&key).unwrap_or(BattlePassState {
-            profile_id,
-            season_id: season.id,
-            xp: 0,
-            free_rewards_claimed: 0,
-            premium_rewards_claimed_lo: 0,
-            premium_rewards_claimed_hi: 0,
-            has_premium: false,
-        });
+        env.storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or(BattlePassState {
+                profile_id,
+                season_id: season.id,
+                xp: 0,
+                free_rewards_claimed: 0,
+                premium_rewards_claimed_lo: 0,
+                premium_rewards_claimed_hi: 0,
+                has_premium: false,
+            });
 
     let gained_xp =
         (scans as u64 * XP_PER_SCAN as u64) + (essence.max(0) as u64 * XP_PER_ESSENCE as u64);
@@ -208,15 +211,18 @@ pub fn add_xp_for_challenge(
 
     let key = BattlePassKey::State(profile_id, season.id);
     let mut state: BattlePassState =
-        env.storage().persistent().get(&key).unwrap_or(BattlePassState {
-            profile_id,
-            season_id: season.id,
-            xp: 0,
-            free_rewards_claimed: 0,
-            premium_rewards_claimed_lo: 0,
-            premium_rewards_claimed_hi: 0,
-            has_premium: false,
-        });
+        env.storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or(BattlePassState {
+                profile_id,
+                season_id: season.id,
+                xp: 0,
+                free_rewards_claimed: 0,
+                premium_rewards_claimed_lo: 0,
+                premium_rewards_claimed_hi: 0,
+                has_premium: false,
+            });
 
     let gained = XP_PER_CHALLENGE_COMPLETE as u64;
     state.xp += gained;
@@ -231,23 +237,23 @@ pub fn add_xp_for_challenge(
 }
 
 /// Grant bonus XP for discovering the season's exclusive nebula type.
-pub fn add_xp_for_seasonal_nebula(
-    env: &Env,
-    profile_id: u64,
-) -> Result<u64, BattlePassError> {
+pub fn add_xp_for_seasonal_nebula(env: &Env, profile_id: u64) -> Result<u64, BattlePassError> {
     let season = get_current_season(env).map_err(|_| BattlePassError::NoActiveSeason)?;
     let key = BattlePassKey::State(profile_id, season.id);
 
     let mut state: BattlePassState =
-        env.storage().persistent().get(&key).unwrap_or(BattlePassState {
-            profile_id,
-            season_id: season.id,
-            xp: 0,
-            free_rewards_claimed: 0,
-            premium_rewards_claimed_lo: 0,
-            premium_rewards_claimed_hi: 0,
-            has_premium: false,
-        });
+        env.storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or(BattlePassState {
+                profile_id,
+                season_id: season.id,
+                xp: 0,
+                free_rewards_claimed: 0,
+                premium_rewards_claimed_lo: 0,
+                premium_rewards_claimed_hi: 0,
+                has_premium: false,
+            });
 
     let gained = XP_PER_SEASONAL_NEBULA as u64;
     state.xp += gained;
@@ -282,15 +288,18 @@ pub fn unlock_premium_pass(
     // Also update the cached flag on the state struct for fast reads.
     let state_key = BattlePassKey::State(profile_id, season.id);
     let mut state: BattlePassState =
-        env.storage().persistent().get(&state_key).unwrap_or(BattlePassState {
-            profile_id,
-            season_id: season.id,
-            xp: 0,
-            free_rewards_claimed: 0,
-            premium_rewards_claimed_lo: 0,
-            premium_rewards_claimed_hi: 0,
-            has_premium: false,
-        });
+        env.storage()
+            .persistent()
+            .get(&state_key)
+            .unwrap_or(BattlePassState {
+                profile_id,
+                season_id: season.id,
+                xp: 0,
+                free_rewards_claimed: 0,
+                premium_rewards_claimed_lo: 0,
+                premium_rewards_claimed_hi: 0,
+                has_premium: false,
+            });
     state.has_premium = true;
     env.storage().persistent().set(&state_key, &state);
 
@@ -339,7 +348,7 @@ pub fn claim_reward_v2(
 
     // Validate tier range.
     let max_tier = match pass_tier {
-        PassTier::Free    => MAX_FREE_TIERS,
+        PassTier::Free => MAX_FREE_TIERS,
         PassTier::Premium => MAX_PREMIUM_TIERS,
     };
     if tier == 0 || tier > max_tier {
@@ -353,7 +362,7 @@ pub fn claim_reward_v2(
 
     // Check claimed bitmask.
     let pass_tier_u32 = match pass_tier {
-        PassTier::Free    => 0u32,
+        PassTier::Free => 0u32,
         PassTier::Premium => 1u32,
     };
 
@@ -428,12 +437,13 @@ pub fn init_season_rewards(
     for i in 0..rewards.len() {
         if let Some(reward) = rewards.get(i) {
             let pass_tier_u32 = match reward.pass_tier {
-                PassTier::Free    => 0u32,
+                PassTier::Free => 0u32,
                 PassTier::Premium => 1u32,
             };
-            env.storage()
-                .instance()
-                .set(&BattlePassKey::Reward(season_id, reward.tier, pass_tier_u32), &reward);
+            env.storage().instance().set(
+                &BattlePassKey::Reward(season_id, reward.tier, pass_tier_u32),
+                &reward,
+            );
         }
     }
 
@@ -481,12 +491,12 @@ pub fn init_default_season_rewards(
     for tier in 1u32..=MAX_PREMIUM_TIERS {
         let xp_required = 200u64 + (tier as u64 - 1) * 100;
         let reward_amount = 75i128 + (tier as i128 - 1) * 30; // 75, 105, 135 …
-        // Assign a cosmetic skin at milestone tiers (every 5 tiers).
+                                                              // Assign a cosmetic skin at milestone tiers (every 5 tiers).
         let cosmetic_skin_id = if tier % 5 == 0 { tier } else { 0 };
         let title_badge = if tier == 50 {
             symbol_short!("grandnom") // "Grand Nomad" title at tier 50
         } else if tier == 25 {
-            symbol_short!("nomad")    // "Nomad" title at tier 25
+            symbol_short!("nomad") // "Nomad" title at tier 25
         } else {
             symbol_short!("")
         };
@@ -503,10 +513,8 @@ pub fn init_default_season_rewards(
             .set(&BattlePassKey::Reward(season_id, tier, 1u32), &reward);
     }
 
-    env.events().publish(
-        (symbol_short!("bp"), symbol_short!("def_init")),
-        season_id,
-    );
+    env.events()
+        .publish((symbol_short!("bp"), symbol_short!("def_init")), season_id);
 
     Ok(())
 }
@@ -514,11 +522,7 @@ pub fn init_default_season_rewards(
 // ─── Cosmetic Registry ────────────────────────────────────────────────────────
 
 /// Register a seasonal cosmetic definition.
-pub fn register_seasonal_cosmetic(
-    env: &Env,
-    admin: Address,
-    cosmetic: SeasonalCosmetic,
-) {
+pub fn register_seasonal_cosmetic(env: &Env, admin: Address, cosmetic: SeasonalCosmetic) {
     admin.require_auth();
     let key = BattlePassKey::SeasonalCosmetic(cosmetic.cosmetic_id);
     env.storage().instance().set(&key, &cosmetic);
@@ -547,11 +551,7 @@ pub fn get_battle_pass_state(
 }
 
 /// Get a player's battle pass state for a specific season (useful for past-season queries).
-pub fn get_pass_progress(
-    env: &Env,
-    profile_id: u64,
-    season_id: u64,
-) -> Option<BattlePassState> {
+pub fn get_pass_progress(env: &Env, profile_id: u64, season_id: u64) -> Option<BattlePassState> {
     env.storage()
         .persistent()
         .get(&BattlePassKey::State(profile_id, season_id))

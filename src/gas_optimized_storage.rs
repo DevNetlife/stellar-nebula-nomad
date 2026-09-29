@@ -48,13 +48,9 @@ pub fn batch_exists(env: &Env, keys: &Vec<Symbol>) -> Vec<bool> {
 }
 
 /// Conditional write - only write if value changed
-pub fn conditional_write_u32(
-    env: &Env,
-    key: Symbol,
-    new_value: u32,
-) -> bool {
+pub fn conditional_write_u32(env: &Env, key: Symbol, new_value: u32) -> bool {
     let current: Option<u32> = env.storage().persistent().get(&key);
-    
+
     match current {
         Some(old) if old == new_value => false, // No change, skip write
         _ => {
@@ -65,13 +61,9 @@ pub fn conditional_write_u32(
 }
 
 /// Conditional write for i128
-pub fn conditional_write_i128(
-    env: &Env,
-    key: Symbol,
-    new_value: i128,
-) -> bool {
+pub fn conditional_write_i128(env: &Env, key: Symbol, new_value: i128) -> bool {
     let current: Option<i128> = env.storage().persistent().get(&key);
-    
+
     match current {
         Some(old) if old == new_value => false,
         _ => {
@@ -89,25 +81,22 @@ pub struct PackedU32x4 {
 
 impl PackedU32x4 {
     pub fn new(a: u32, b: u32, c: u32, d: u32) -> Self {
-        let packed = ((a as u128) << 96)
-            | ((b as u128) << 64)
-            | ((c as u128) << 32)
-            | (d as u128);
+        let packed = ((a as u128) << 96) | ((b as u128) << 64) | ((c as u128) << 32) | (d as u128);
         Self { packed }
     }
-    
+
     pub fn get_a(&self) -> u32 {
         (self.packed >> 96) as u32
     }
-    
+
     pub fn get_b(&self) -> u32 {
         (self.packed >> 64) as u32
     }
-    
+
     pub fn get_c(&self) -> u32 {
         (self.packed >> 32) as u32
     }
-    
+
     pub fn get_d(&self) -> u32 {
         self.packed as u32
     }
@@ -173,7 +162,7 @@ mod tests {
     fn test_increment_counter() {
         let env = Env::default();
         let key = symbol_short!("counter");
-        
+
         assert_eq!(increment_counter(&env, key.clone()), 1);
         assert_eq!(increment_counter(&env, key.clone()), 2);
         assert_eq!(increment_counter(&env, key), 3);
@@ -183,13 +172,13 @@ mod tests {
     fn test_conditional_write() {
         let env = Env::default();
         let key = symbol_short!("test");
-        
+
         // First write should succeed
         assert!(conditional_write_u32(&env, key.clone(), 42u32));
-        
+
         // Same value should skip write
         assert!(!conditional_write_u32(&env, key.clone(), 42u32));
-        
+
         // Different value should write
         assert!(conditional_write_u32(&env, key, 43u32));
     }

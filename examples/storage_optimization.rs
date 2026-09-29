@@ -45,7 +45,10 @@ fn main() {
         // ── Step 1: Configure default TTLs ───────────────────────────────
         initialize_bump_config(&env, &admin);
         let cfg = get_bump_config(&env);
-        println!("Bump config: default_ttl={} max_ttl={}", cfg.default_ttl, cfg.max_ttl);
+        println!(
+            "Bump config: default_ttl={} max_ttl={}",
+            cfg.default_ttl, cfg.max_ttl
+        );
 
         // ── Step 2: Single TTL-bumped write ──────────────────────────────
         // Writes the value and extends its TTL in one call, so it will not
@@ -57,7 +60,12 @@ fn main() {
         // ── Step 3: Batched writes ───────────────────────────────────────
         // One re-entrancy guard, one config read and one timestamp for the
         // whole batch. keys and values must have equal length.
-        let keys = vec![&env, symbol_short!("a"), symbol_short!("b"), symbol_short!("c")];
+        let keys = vec![
+            &env,
+            symbol_short!("a"),
+            symbol_short!("b"),
+            symbol_short!("c"),
+        ];
         let values = vec![&env, payload.clone(), payload.clone(), payload.clone()];
         let stored = batch_store_with_bump(&env, keys.clone(), values).unwrap();
         println!("Batch stored {} entries", stored.len());
@@ -118,6 +126,8 @@ fn main() {
         });
 
         let final_count: u64 = env.storage().instance().get(&counter_key).unwrap();
-        println!("10 increments: naive={naive} cpu, cached={cached} cpu (final value {final_count})");
+        println!(
+            "10 increments: naive={naive} cpu, cached={cached} cpu (final value {final_count})"
+        );
     });
 }

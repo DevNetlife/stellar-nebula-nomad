@@ -150,7 +150,7 @@ pub struct ReferralAnalytics {
 /// Generate a unique referral code for a referrer
 pub fn generate_referral_code(env: &Env, referrer: &Address) -> Result<BytesN<8>, RewardError> {
     referrer.require_auth();
-    
+
     // Check if already has a code
     if let Some(code) = env
         .storage()
@@ -159,10 +159,10 @@ pub fn generate_referral_code(env: &Env, referrer: &Address) -> Result<BytesN<8>
     {
         return Ok(code);
     }
-    
+
     // Generate code from address hash
     let code = generate_code_from_address(env, referrer);
-    
+
     // Ensure uniqueness
     if env
         .storage()
@@ -176,14 +176,14 @@ pub fn generate_referral_code(env: &Env, referrer: &Address) -> Result<BytesN<8>
         new_code[4..].copy_from_slice(&timestamp.to_be_bytes()[..4]);
         return Ok(BytesN::from_array(env, &new_code));
     }
-    
+
     env.storage()
         .instance()
         .set(&RewardKey::ReferralCode(code.clone()), referrer);
     env.storage()
         .instance()
         .set(&RewardKey::ReferrerCodeMapping(referrer.clone()), &code);
-    
+
     // Initialize stats
     let stats = ReferrerStats {
         address: referrer.clone(),
@@ -196,16 +196,16 @@ pub fn generate_referral_code(env: &Env, referrer: &Address) -> Result<BytesN<8>
         referral_code: code.clone(),
         suspicion_score: 0,
     };
-    
+
     env.storage()
         .instance()
         .set(&RewardKey::ReferrerStats(referrer.clone()), &stats);
-    
+
     env.events().publish(
         (symbol_short!("reward"), symbol_short!("code_gen")),
         (referrer.clone(), code.clone()),
     );
-    
+
     Ok(code)
 }
 
@@ -218,34 +218,34 @@ pub fn record_referral(
     if referrer == new_user {
         return Err(RewardError::SelfReferral);
     }
-    
+
     // Check for suspicious activity
     if is_suspicious(env, referrer) {
         return Err(RewardError::SuspiciousActivity);
     }
-    
+
     let mut stats: ReferrerStats = env
         .storage()
         .instance()
         .get(&RewardKey::ReferrerStats(referrer.clone()))
         .ok_or(RewardError::ReferrerNotFound)?;
-    
+
     // Update stats
     stats.total_referrals += 1;
-    
+
     // Calculate reward based on tier
     let reward = calculate_tier_reward(stats.current_tier);
-    
+
     // Update pending rewards
     stats.pending_rewards += reward;
-    
+
     // Update tier if threshold met
     update_tier(&mut stats);
-    
+
     env.storage()
         .instance()
         .set(&RewardKey::ReferrerStats(referrer.clone()), &stats);
-    
+
     // Update daily analytics
     let day = env.ledger().timestamp() / 86_400;
     let daily_signups: u32 = env
@@ -256,15 +256,21 @@ pub fn record_referral(
     env.storage()
         .instance()
         .set(&RewardKey::DailySignups(day), &(daily_signups + 1));
-    
+
     // Update leaderboard
-    update_leaderboard(env, referrer, stats.active_referrals, stats.current_tier, stats.total_rewards_earned);
-    
+    update_leaderboard(
+        env,
+        referrer,
+        stats.active_referrals,
+        stats.current_tier,
+        stats.total_rewards_earned,
+    );
+
     env.events().publish(
         (symbol_short!("reward"), symbol_short!("referral")),
         (referrer.clone(), new_user.clone(), reward),
     );
-    
+
     Ok(reward)
 }
 
@@ -275,45 +281,51 @@ pub fn mark_referral_active(env: &Env, referrer: &Address) -> Result<(), RewardE
         .instance()
         .get(&RewardKey::ReferrerStats(referrer.clone()))
         .ok_or(RewardError::ReferrerNotFound)?;
-    
+
     if stats.active_referrals < stats.total_referrals {
         stats.active_referrals += 1;
         update_tier(&mut stats);
-        
+
         env.storage()
             .instance()
             .set(&RewardKey::ReferrerStats(referrer.clone()), &stats);
-        
+
         // Update leaderboard
-        update_leaderboard(env, referrer, stats.active_referrals, stats.current_tier, stats.total_rewards_earned);
+        update_leaderboard(
+            env,
+            referrer,
+            stats.active_referrals,
+            stats.current_tier,
+            stats.total_rewards_earned,
+        );
     }
-    
+
     Ok(())
 }
 
 /// Claim pending rewards
 pub fn claim_rewards(env: &Env, referrer: &Address) -> Result<i128, RewardError> {
     referrer.require_auth();
-    
+
     let mut stats: ReferrerStats = env
         .storage()
         .instance()
         .get(&RewardKey::ReferrerStats(referrer.clone()))
         .ok_or(RewardError::ReferrerNotFound)?;
-    
+
     if stats.pending_rewards == 0 {
         return Err(RewardError::NoRewardsToClaim);
     }
-    
+
     let reward = stats.pending_rewards;
     stats.pending_rewards = 0;
     stats.total_rewards_earned += reward;
     stats.last_claim = env.ledger().timestamp();
-    
+
     env.storage()
         .instance()
         .set(&RewardKey::ReferrerStats(referrer.clone()), &stats);
-    
+
     // Update total distributed
     let total: i128 = env
         .storage()
@@ -323,7 +335,7 @@ pub fn claim_rewards(env: &Env, referrer: &Address) -> Result<i128, RewardError>
     env.storage()
         .instance()
         .set(&RewardKey::TotalRewardsDistributed, &(total + reward));
-    
+
     // Update daily analytics
     let day = env.ledger().timestamp() / 86_400;
     let daily_claims: u32 = env
@@ -334,12 +346,12 @@ pub fn claim_rewards(env: &Env, referrer: &Address) -> Result<i128, RewardError>
     env.storage()
         .instance()
         .set(&RewardKey::DailyClaims(day), &(daily_claims + 1));
-    
+
     env.events().publish(
         (symbol_short!("reward"), symbol_short!("claimed")),
         (referrer.clone(), reward),
     );
-    
+
     Ok(reward)
 }
 
@@ -372,7 +384,7 @@ pub fn get_referral_analytics(env: &Env) -> ReferralAnalytics {
         .instance()
         .get(&RewardKey::TotalRewardsDistributed)
         .unwrap_or(0);
-    
+
     // Calculate totals from all referrer stats (simplified for MVP)
     ReferralAnalytics {
         total_referrers: 0,
@@ -386,23 +398,23 @@ pub fn get_referral_analytics(env: &Env) -> ReferralAnalytics {
 /// Flag suspicious activity
 pub fn flag_suspicious(env: &Env, admin: &Address, target: &Address) -> Result<(), RewardError> {
     admin.require_auth();
-    
+
     env.storage()
         .instance()
         .set(&RewardKey::SuspiciousFlag(target.clone()), &true);
-    
+
     if let Some(mut stats) = get_referrer_stats(env, target) {
         stats.suspicion_score = 100;
         env.storage()
             .instance()
             .set(&RewardKey::ReferrerStats(target.clone()), &stats);
     }
-    
+
     env.events().publish(
         (symbol_short!("reward"), symbol_short!("flagged")),
         (admin.clone(), target.clone()),
     );
-    
+
     Ok(())
 }
 
@@ -425,7 +437,7 @@ pub fn get_tier_reward(tier: u32) -> i128 {
 }
 
 // ─── Internal Helpers ──────────────────────────────────────────────────────────
-fn generate_code_from_address(env: &Env, address: &Address) -> BytesN<8> {
+fn generate_code_from_address(env: &Env, _address: &Address) -> BytesN<8> {
     // Simple code generation from address bytes
     let mut code = [0u8; 8];
     // Use first 8 bytes of address representation
@@ -437,7 +449,7 @@ fn generate_code_from_address(env: &Env, address: &Address) -> BytesN<8> {
     code[5] = 0x45; // 'E'
     code[6] = 0x00;
     code[7] = 0x00;
-    
+
     BytesN::from_array(env, &code)
 }
 
@@ -447,7 +459,7 @@ fn calculate_tier_reward(tier: u32) -> i128 {
 
 fn update_tier(stats: &mut ReferrerStats) {
     let active = stats.active_referrals.min(MAX_TIER_REFERRALS);
-    
+
     stats.current_tier = if active >= TIER3_THRESHOLD {
         3
     } else if active >= TIER2_THRESHOLD {
@@ -462,7 +474,7 @@ fn update_leaderboard(
     referrer: &Address,
     active_referrals: u32,
     tier: u32,
-    total_rewards: i128,
+    _total_rewards: i128,
 ) {
     // Simplified leaderboard update - just emit event
     env.events().publish(
@@ -473,9 +485,7 @@ fn update_leaderboard(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use soroban_sdk::testutils::Address as _;
-    
+
     #[test]
     #[ignore]
     fn test_generate_referral_code() {

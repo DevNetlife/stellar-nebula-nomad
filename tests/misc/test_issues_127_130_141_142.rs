@@ -31,7 +31,9 @@ fn setup() -> (Env, NebulaNomadContractClient<'static>) {
 
 fn mint_ship(env: &Env, client: &NebulaNomadContractClient, owner: &Address) -> u64 {
     let metadata = Bytes::from_slice(env, &[0u8; 4]);
-    client.mint_ship(owner, &symbol_short!("explorer"), &metadata).id
+    client
+        .mint_ship(owner, &symbol_short!("explorer"), &metadata)
+        .id
 }
 
 // ── #127: Tiered referral rewards ─────────────────────────────────────────────

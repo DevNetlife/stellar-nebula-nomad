@@ -1,13 +1,17 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::{Address as _, Ledger}, Address, BytesN, Env, String, symbol_short};
+use soroban_sdk::{
+    symbol_short,
+    testutils::{Address as _, Ledger},
+    Address, BytesN, Env, String,
+};
 use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient, GRID_SIZE};
 
 #[test]
 fn test_season_scheduling() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -38,7 +42,7 @@ fn test_season_scheduling() {
 fn test_battle_pass_progression() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
@@ -66,7 +70,7 @@ fn test_battle_pass_progression() {
 fn test_battle_pass_reward_claiming() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);

@@ -2,9 +2,7 @@
 
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, Address, Env, Vec};
-use stellar_nebula_nomad::access_control::{
-    self, AccessControlError, BATCH_GRANT_LIMIT,
-};
+use stellar_nebula_nomad::access_control::{self, AccessControlError, BATCH_GRANT_LIMIT};
 
 fn setup_env() -> (Env, Address) {
     let env = Env::default();
@@ -44,8 +42,10 @@ fn test_init_rbac_creates_admin_role() {
     let (env, admin) = setup_env();
     let result = access_control::init_roles(&env, admin.clone());
     assert!(result.is_ok(), "init_roles should succeed");
-    assert!(access_control::has_role(&env, &symbol_short!("admin"), &admin), 
-            "Admin should hold admin role after init");
+    assert!(
+        access_control::has_role(&env, &symbol_short!("admin"), &admin),
+        "Admin should hold admin role after init"
+    );
 }
 
 #[test]
@@ -53,8 +53,11 @@ fn test_init_rbac_idempotent_fails_on_retry() {
     let (env, admin) = setup_env();
     access_control::init_roles(&env, admin.clone()).unwrap();
     let result = access_control::init_roles(&env, admin);
-    assert_eq!(result, Err(AccessControlError::InitializationFailed),
-               "Second init should fail with InitializationFailed");
+    assert_eq!(
+        result,
+        Err(AccessControlError::InitializationFailed),
+        "Second init should fail with InitializationFailed"
+    );
 }
 
 // ── Role Storage and Retrieval ──
@@ -64,7 +67,11 @@ fn test_has_role_false_for_ungranted() {
     let (env, admin) = setup_env();
     access_control::init_roles(&env, admin).unwrap();
     let player = Address::generate(&env);
-    assert!(!access_control::has_role(&env, &symbol_short!("nomad"), &player));
+    assert!(!access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &player
+    ));
 }
 
 #[test]
@@ -73,7 +80,11 @@ fn test_has_role_true_after_grant() {
     access_control::init_roles(&env, admin.clone()).unwrap();
     let player = Address::generate(&env);
     access_control::grant_role(&env, admin, symbol_short!("nomad"), player.clone(), None).unwrap();
-    assert!(access_control::has_role(&env, &symbol_short!("nomad"), &player));
+    assert!(access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &player
+    ));
 }
 
 #[test]
@@ -81,10 +92,25 @@ fn test_has_role_false_after_revoke() {
     let (env, admin) = setup_env();
     access_control::init_roles(&env, admin.clone()).unwrap();
     let player = Address::generate(&env);
-    access_control::grant_role(&env, admin.clone(), symbol_short!("nomad"), player.clone(), None).unwrap();
-    assert!(access_control::has_role(&env, &symbol_short!("nomad"), &player));
+    access_control::grant_role(
+        &env,
+        admin.clone(),
+        symbol_short!("nomad"),
+        player.clone(),
+        None,
+    )
+    .unwrap();
+    assert!(access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &player
+    ));
     access_control::revoke_role(&env, admin, symbol_short!("nomad"), player.clone()).unwrap();
-    assert!(!access_control::has_role(&env, &symbol_short!("nomad"), &player));
+    assert!(!access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &player
+    ));
 }
 
 #[test]
@@ -93,11 +119,24 @@ fn test_has_role_false_after_expiry() {
     access_control::init_roles(&env, admin.clone()).unwrap();
     let player = Address::generate(&env);
     let expiry = env.ledger().sequence() + 10;
-    access_control::grant_role(&env, admin, symbol_short!("nomad"), player.clone(), Some(expiry)).unwrap();
-    assert!(access_control::has_role(&env, &symbol_short!("nomad"), &player));
+    access_control::grant_role(
+        &env,
+        admin,
+        symbol_short!("nomad"),
+        player.clone(),
+        Some(expiry),
+    )
+    .unwrap();
+    assert!(access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &player
+    ));
     advance_ledger(&env, 10);
-    assert!(!access_control::has_role(&env, &symbol_short!("nomad"), &player),
-            "Role should be false at expiry ledger");
+    assert!(
+        !access_control::has_role(&env, &symbol_short!("nomad"), &player),
+        "Role should be false at expiry ledger"
+    );
 }
 
 #[test]
@@ -106,9 +145,20 @@ fn test_has_role_true_before_expiry() {
     access_control::init_roles(&env, admin.clone()).unwrap();
     let player = Address::generate(&env);
     let expiry = env.ledger().sequence() + 50;
-    access_control::grant_role(&env, admin, symbol_short!("nomad"), player.clone(), Some(expiry)).unwrap();
+    access_control::grant_role(
+        &env,
+        admin,
+        symbol_short!("nomad"),
+        player.clone(),
+        Some(expiry),
+    )
+    .unwrap();
     advance_ledger(&env, 10);
-    assert!(access_control::has_role(&env, &symbol_short!("nomad"), &player));
+    assert!(access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &player
+    ));
 }
 
 #[test]
@@ -118,7 +168,11 @@ fn test_has_role_true_forever_without_expiry() {
     let player = Address::generate(&env);
     access_control::grant_role(&env, admin, symbol_short!("nomad"), player.clone(), None).unwrap();
     advance_ledger(&env, 1000);
-    assert!(access_control::has_role(&env, &symbol_short!("nomad"), &player));
+    assert!(access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &player
+    ));
 }
 
 // ── Permission Storage and Retrieval ──
@@ -127,15 +181,24 @@ fn test_has_role_true_forever_without_expiry() {
 fn test_has_permission_false_for_undefined() {
     let (env, admin) = setup_env();
     access_control::init_roles(&env, admin).unwrap();
-    assert!(!access_control::has_permission(&env, &symbol_short!("nomad"), &symbol_short!("scan")));
+    assert!(!access_control::has_permission(
+        &env,
+        &symbol_short!("nomad"),
+        &symbol_short!("scan")
+    ));
 }
 
 #[test]
 fn test_has_permission_true_after_grant() {
     let (env, admin) = setup_env();
     access_control::init_roles(&env, admin.clone()).unwrap();
-    access_control::grant_permission(&env, admin, symbol_short!("nomad"), symbol_short!("scan")).unwrap();
-    assert!(access_control::has_permission(&env, &symbol_short!("nomad"), &symbol_short!("scan")));
+    access_control::grant_permission(&env, admin, symbol_short!("nomad"), symbol_short!("scan"))
+        .unwrap();
+    assert!(access_control::has_permission(
+        &env,
+        &symbol_short!("nomad"),
+        &symbol_short!("scan")
+    ));
 }
 
 #[test]
@@ -143,10 +206,19 @@ fn test_has_permission_false_after_revoke() {
     let (env, admin) = setup_env();
     access_control::init_roles(&env, admin.clone()).unwrap();
     let action = symbol_short!("scan");
-    access_control::grant_permission(&env, admin.clone(), symbol_short!("nomad"), action.clone()).unwrap();
-    assert!(access_control::has_permission(&env, &symbol_short!("nomad"), &action));
+    access_control::grant_permission(&env, admin.clone(), symbol_short!("nomad"), action.clone())
+        .unwrap();
+    assert!(access_control::has_permission(
+        &env,
+        &symbol_short!("nomad"),
+        &action
+    ));
     access_control::revoke_permission(&env, admin, symbol_short!("nomad"), action.clone()).unwrap();
-    assert!(!access_control::has_permission(&env, &symbol_short!("nomad"), &action));
+    assert!(!access_control::has_permission(
+        &env,
+        &symbol_short!("nomad"),
+        &action
+    ));
 }
 
 // ── grant_role Tests ──
@@ -156,9 +228,14 @@ fn test_grant_role_admin_success() {
     let (env, admin) = setup_env();
     access_control::init_roles(&env, admin.clone()).unwrap();
     let player = Address::generate(&env);
-    let result = access_control::grant_role(&env, admin, symbol_short!("nomad"), player.clone(), None);
+    let result =
+        access_control::grant_role(&env, admin, symbol_short!("nomad"), player.clone(), None);
     assert!(result.is_ok());
-    assert!(access_control::has_role(&env, &symbol_short!("nomad"), &player));
+    assert!(access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &player
+    ));
 }
 
 #[test]
@@ -167,9 +244,19 @@ fn test_grant_role_non_admin_fails() {
     access_control::init_roles(&env, admin).unwrap();
     let non_admin = Address::generate(&env);
     let player = Address::generate(&env);
-    let result = access_control::grant_role(&env, non_admin, symbol_short!("nomad"), player.clone(), None);
+    let result = access_control::grant_role(
+        &env,
+        non_admin,
+        symbol_short!("nomad"),
+        player.clone(),
+        None,
+    );
     assert_eq!(result, Err(AccessControlError::AdminRequired));
-    assert!(!access_control::has_role(&env, &symbol_short!("nomad"), &player));
+    assert!(!access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &player
+    ));
 }
 
 #[test]
@@ -178,7 +265,8 @@ fn test_grant_role_past_expiry_fails() {
     access_control::init_roles(&env, admin.clone()).unwrap();
     let player = Address::generate(&env);
     let past = env.ledger().sequence() - 1;
-    let result = access_control::grant_role(&env, admin, symbol_short!("nomad"), player, Some(past));
+    let result =
+        access_control::grant_role(&env, admin, symbol_short!("nomad"), player, Some(past));
     assert_eq!(result, Err(AccessControlError::InvalidExpiry));
 }
 
@@ -193,8 +281,18 @@ fn test_batch_grant_1_to_5_addresses() {
         for _ in 0..batch_size {
             grantees.push_back(Address::generate(&env));
         }
-        let result = access_control::grant_role_batch(&env, admin, symbol_short!("nomad"), grantees.clone(), None);
-        assert!(result.is_ok(), "Batch grant of {} should succeed", batch_size);
+        let result = access_control::grant_role_batch(
+            &env,
+            admin,
+            symbol_short!("nomad"),
+            grantees.clone(),
+            None,
+        );
+        assert!(
+            result.is_ok(),
+            "Batch grant of {} should succeed",
+            batch_size
+        );
         for i in 0..grantees.len() {
             if let Some(g) = grantees.get(i) {
                 assert!(access_control::has_role(&env, &symbol_short!("nomad"), &g));
@@ -211,13 +309,21 @@ fn test_batch_grant_6_addresses_fails() {
     for _ in 0..6 {
         grantees.push_back(Address::generate(&env));
     }
-    let result = access_control::grant_role_batch(&env, admin, symbol_short!("nomad"), grantees.clone(), None);
+    let result = access_control::grant_role_batch(
+        &env,
+        admin,
+        symbol_short!("nomad"),
+        grantees.clone(),
+        None,
+    );
     assert_eq!(result, Err(AccessControlError::BatchLimitExceeded));
     // Verify no roles were granted
     for i in 0..grantees.len() {
         if let Some(g) = grantees.get(i) {
-            assert!(!access_control::has_role(&env, &symbol_short!("nomad"), &g),
-                    "No roles should be granted when batch exceeds limit");
+            assert!(
+                !access_control::has_role(&env, &symbol_short!("nomad"), &g),
+                "No roles should be granted when batch exceeds limit"
+            );
         }
     }
 }
@@ -231,11 +337,21 @@ fn test_check_permission_succeeds_with_role() {
     let player = Address::generate(&env);
     let action = symbol_short!("scan");
 
-    access_control::grant_role(&env, admin.clone(), symbol_short!("nomad"), player.clone(), None).unwrap();
+    access_control::grant_role(
+        &env,
+        admin.clone(),
+        symbol_short!("nomad"),
+        player.clone(),
+        None,
+    )
+    .unwrap();
     access_control::grant_permission(&env, admin, symbol_short!("nomad"), action.clone()).unwrap();
 
     let result = access_control::check_permission(&env, &player, &action);
-    assert!(result.is_ok(), "check_permission should succeed when role permits");
+    assert!(
+        result.is_ok(),
+        "check_permission should succeed when role permits"
+    );
 }
 
 #[test]
@@ -272,7 +388,14 @@ fn test_check_permission_fails_expired_role() {
     let action = symbol_short!("scan");
     let expiry = env.ledger().sequence() + 5;
 
-    access_control::grant_role(&env, admin.clone(), symbol_short!("nomad"), player.clone(), Some(expiry)).unwrap();
+    access_control::grant_role(
+        &env,
+        admin.clone(),
+        symbol_short!("nomad"),
+        player.clone(),
+        Some(expiry),
+    )
+    .unwrap();
     access_control::grant_permission(&env, admin, symbol_short!("nomad"), action.clone()).unwrap();
 
     advance_ledger(&env, 5);
@@ -288,8 +411,16 @@ fn test_check_permission_fails_revoked_role() {
     let player = Address::generate(&env);
     let action = symbol_short!("scan");
 
-    access_control::grant_role(&env, admin.clone(), symbol_short!("nomad"), player.clone(), None).unwrap();
-    access_control::grant_permission(&env, admin.clone(), symbol_short!("nomad"), action.clone()).unwrap();
+    access_control::grant_role(
+        &env,
+        admin.clone(),
+        symbol_short!("nomad"),
+        player.clone(),
+        None,
+    )
+    .unwrap();
+    access_control::grant_permission(&env, admin.clone(), symbol_short!("nomad"), action.clone())
+        .unwrap();
 
     assert!(access_control::check_permission(&env, &player, &action).is_ok());
 
@@ -307,11 +438,26 @@ fn test_check_permission_multiple_roles_any_permits() {
     let action = symbol_short!("scan");
 
     // Grant player two roles
-    access_control::grant_role(&env, admin.clone(), symbol_short!("nomad"), player.clone(), None).unwrap();
-    access_control::grant_role(&env, admin.clone(), symbol_short!("indexer"), player.clone(), None).unwrap();
+    access_control::grant_role(
+        &env,
+        admin.clone(),
+        symbol_short!("nomad"),
+        player.clone(),
+        None,
+    )
+    .unwrap();
+    access_control::grant_role(
+        &env,
+        admin.clone(),
+        symbol_short!("indexer"),
+        player.clone(),
+        None,
+    )
+    .unwrap();
 
     // Grant permission to only second role
-    access_control::grant_permission(&env, admin, symbol_short!("indexer"), action.clone()).unwrap();
+    access_control::grant_permission(&env, admin, symbol_short!("indexer"), action.clone())
+        .unwrap();
 
     // Should succeed because player holds indexer role which has permission
     let result = access_control::check_permission(&env, &player, &action);
@@ -329,8 +475,16 @@ fn test_transfer_admin_succeeds() {
     let result = access_control::transfer_admin(&env, admin.clone(), new_admin.clone());
     assert!(result.is_ok());
 
-    assert!(access_control::has_role(&env, &symbol_short!("admin"), &new_admin));
-    assert!(!access_control::has_role(&env, &symbol_short!("admin"), &admin));
+    assert!(access_control::has_role(
+        &env,
+        &symbol_short!("admin"),
+        &new_admin
+    ));
+    assert!(!access_control::has_role(
+        &env,
+        &symbol_short!("admin"),
+        &admin
+    ));
 }
 
 #[test]
@@ -353,9 +507,19 @@ fn test_new_admin_can_perform_admin_actions() {
 
     access_control::transfer_admin(&env, admin, new_admin.clone()).unwrap();
 
-    let result = access_control::grant_role(&env, new_admin, symbol_short!("nomad"), player.clone(), None);
+    let result = access_control::grant_role(
+        &env,
+        new_admin,
+        symbol_short!("nomad"),
+        player.clone(),
+        None,
+    );
     assert!(result.is_ok());
-    assert!(access_control::has_role(&env, &symbol_short!("nomad"), &player));
+    assert!(access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &player
+    ));
 }
 
 #[test]
@@ -379,9 +543,19 @@ fn test_non_admin_cannot_grant_admin_role() {
     access_control::init_roles(&env, admin).unwrap();
     let attacker = Address::generate(&env);
 
-    let result = access_control::grant_role(&env, attacker.clone(), symbol_short!("admin"), attacker.clone(), None);
+    let result = access_control::grant_role(
+        &env,
+        attacker.clone(),
+        symbol_short!("admin"),
+        attacker.clone(),
+        None,
+    );
     assert_eq!(result, Err(AccessControlError::AdminRequired));
-    assert!(!access_control::has_role(&env, &symbol_short!("admin"), &attacker));
+    assert!(!access_control::has_role(
+        &env,
+        &symbol_short!("admin"),
+        &attacker
+    ));
 }
 
 #[test]
@@ -391,9 +565,19 @@ fn test_non_admin_cannot_grant_arbitrary_role() {
     let attacker = Address::generate(&env);
     let target = Address::generate(&env);
 
-    let result = access_control::grant_role(&env, attacker.clone(), symbol_short!("nomad"), target.clone(), None);
+    let result = access_control::grant_role(
+        &env,
+        attacker.clone(),
+        symbol_short!("nomad"),
+        target.clone(),
+        None,
+    );
     assert_eq!(result, Err(AccessControlError::AdminRequired));
-    assert!(!access_control::has_role(&env, &symbol_short!("nomad"), &target));
+    assert!(!access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &target
+    ));
 }
 
 // ── Role Expiry Bypass Attack Simulation ──
@@ -406,7 +590,14 @@ fn test_cannot_use_expired_role() {
     let action = symbol_short!("sensitive");
 
     let expiry = env.ledger().sequence() + 1;
-    access_control::grant_role(&env, admin.clone(), symbol_short!("nomad"), player.clone(), Some(expiry)).unwrap();
+    access_control::grant_role(
+        &env,
+        admin.clone(),
+        symbol_short!("nomad"),
+        player.clone(),
+        Some(expiry),
+    )
+    .unwrap();
     access_control::grant_permission(&env, admin, symbol_short!("nomad"), action.clone()).unwrap();
 
     // At expiry, should fail
@@ -424,8 +615,16 @@ fn test_cannot_use_revoked_role() {
     let player = Address::generate(&env);
     let action = symbol_short!("sensitive");
 
-    access_control::grant_role(&env, admin.clone(), symbol_short!("nomad"), player.clone(), None).unwrap();
-    access_control::grant_permission(&env, admin.clone(), symbol_short!("nomad"), action.clone()).unwrap();
+    access_control::grant_role(
+        &env,
+        admin.clone(),
+        symbol_short!("nomad"),
+        player.clone(),
+        None,
+    )
+    .unwrap();
+    access_control::grant_permission(&env, admin.clone(), symbol_short!("nomad"), action.clone())
+        .unwrap();
 
     // Should work initially
     assert!(access_control::check_permission(&env, &player, &action).is_ok());
@@ -448,16 +647,28 @@ fn test_role_membership_distinct_from_permissions() {
     let shared_name = symbol_short!("admin");
 
     // Grant roleAS a role to player
-    access_control::grant_role(&env, admin.clone(), shared_name.clone(), player.clone(), None).unwrap();
+    access_control::grant_role(
+        &env,
+        admin.clone(),
+        shared_name.clone(),
+        player.clone(),
+        None,
+    )
+    .unwrap();
 
     // Grant permission for action "admin" to role "nomad" (should not affect role membership)
-    access_control::grant_permission(&env, admin, symbol_short!("nomad"), shared_name.clone()).unwrap();
+    access_control::grant_permission(&env, admin, symbol_short!("nomad"), shared_name.clone())
+        .unwrap();
 
     // Player should have the "admin" role
     assert!(access_control::has_role(&env, &shared_name, &player));
 
     // But nomad should have permission for "admin" action, not affected by role grant
-    assert!(access_control::has_permission(&env, &symbol_short!("nomad"), &shared_name));
+    assert!(access_control::has_permission(
+        &env,
+        &symbol_short!("nomad"),
+        &shared_name
+    ));
 }
 
 // ── Admin Transfer Race Condition Test ──
@@ -473,8 +684,11 @@ fn test_old_admin_cannot_perform_admin_actions_after_transfer() {
 
     // Old admin tries to revoke role (admin-only operation)
     let result = access_control::revoke_role(&env, admin, symbol_short!("nomad"), player);
-    assert_eq!(result, Err(AccessControlError::AdminRequired),
-               "Old admin should not be able to revoke roles");
+    assert_eq!(
+        result,
+        Err(AccessControlError::AdminRequired),
+        "Old admin should not be able to revoke roles"
+    );
 }
 
 // ── Idempotency and Vacuousness Checks ──
@@ -487,11 +701,21 @@ fn test_failed_grant_role_leaves_no_state_change() {
     let player = Address::generate(&env);
 
     // Attempt grant by non-admin (should fail)
-    let result = access_control::grant_role(&env, non_admin, symbol_short!("nomad"), player.clone(), None);
+    let result = access_control::grant_role(
+        &env,
+        non_admin,
+        symbol_short!("nomad"),
+        player.clone(),
+        None,
+    );
     assert_eq!(result, Err(AccessControlError::AdminRequired));
 
     // Verify no role was granted
-    assert!(!access_control::has_role(&env, &symbol_short!("nomad"), &player));
+    assert!(!access_control::has_role(
+        &env,
+        &symbol_short!("nomad"),
+        &player
+    ));
 }
 
 #[test]
@@ -503,14 +727,22 @@ fn test_failed_batch_grant_granular_check() {
         grantees.push_back(Address::generate(&env));
     }
 
-    let result = access_control::grant_role_batch(&env, admin, symbol_short!("nomad"), grantees.clone(), None);
+    let result = access_control::grant_role_batch(
+        &env,
+        admin,
+        symbol_short!("nomad"),
+        grantees.clone(),
+        None,
+    );
     assert_eq!(result, Err(AccessControlError::BatchLimitExceeded));
 
     // Verify NONE of the 6 addresses got the role (all-or-nothing)
     for i in 0..grantees.len() {
         if let Some(g) = grantees.get(i) {
-            assert!(!access_control::has_role(&env, &symbol_short!("nomad"), &g),
-                    "No address should hold role when batch exceeds limit");
+            assert!(
+                !access_control::has_role(&env, &symbol_short!("nomad"), &g),
+                "No address should hold role when batch exceeds limit"
+            );
         }
     }
 }
@@ -523,5 +755,8 @@ fn test_revoke_idempotent_success_on_non_held_role() {
 
     // Revoke a role the player never had
     let result = access_control::revoke_role(&env, admin, symbol_short!("nomad"), player.clone());
-    assert!(result.is_ok(), "Revoke should succeed even if role was never held");
+    assert!(
+        result.is_ok(),
+        "Revoke should succeed even if role was never held"
+    );
 }

@@ -8,6 +8,7 @@
 //     at the top of mint_resource() before any state mutation.
 //   • RateLimitHit events are emitted inside check_rate_limit.
 
+use crate::economics::anti_whale::{process_anti_whale_action, AntiWhaleError};
 use crate::nebula_explorer::{CellType, NebulaLayout};
 use crate::nebula_gen::{NebulaError as NebulaGenError, NebulaGen};
 use crate::rate_limiter::{check_rate_limit, Operation, RateLimitError};
@@ -187,6 +188,64 @@ impl ResourceMinterContract {
         // ── Auth ───────────────────────────────────────────────
         caller.require_auth();
 
+        // ── Rate limit check (Issue #175) ──────────────────────
+        check_rate_limit(env, &caller, Operation::ResourceMinting).map_err(MinterError::from)?;
+
+        // ── Basic validation ───────────────────────────────────
+        if amount == 0 {
+            return Err(MinterError::InvalidAmount);
+        }
+
+        // ── Confirm anomaly exists for this ship ───────────────
+        NebulaGen::has_anomaly(env.clone(), ship_id, anomaly_index).map_err(|e| match e {
+            NebulaGenError::LayoutNotFound => MinterError::NoLayoutForShip,
+            NebulaGenError::AnomalyOutOfBounds => MinterError::NoResourceAtAnomaly,
+            _ => MinterError::NoLayoutForShip,
+        })?;
+
+        // ── Anti-Whale check (Issue #455) ─────────────────────
+        let (effective_amount, _progressive_fee) = process_anti_whale_action(env, &caller, amount)?;
+
+        // ── Update balances (checked: Issue #239) ──────────────
+        let balance_key = MinterKey::Balance(caller.clone(), resource_type.clone());
+        let current: u64 = env.storage().persistent().get(&balance_key).unwrap_or(0);
+        let new_balance = current
+            .checked_add(effective_amount)
+            .ok_or(MinterError::ArithmeticOverflow)?;
+        env.storage().persistent().set(&balance_key, &new_balance);
+
+        let supply_key = MinterKey::TotalSupply(resource_type.clone());
+        let supply: u64 = env.storage().persistent().get(&supply_key).unwrap_or(0);
+        let new_supply = supply
+            .checked_add(effective_amount)
+            .ok_or(MinterError::ArithmeticOverflow)?;
+        env.storage().persistent().set(&supply_key, &new_supply);
+
+        // ── Cumulative mint counter (Issue #281) ───────────────
+        // Unlike TotalSupply this is monotonic — burning reduces supply but
+        // never the historical mint total, which is the denominator of the
+        // deflation rate.
+        let minted_key = MinterKey::TotalMinted(resource_type.clone());
+        let minted: u64 = env.storage().persistent().get(&minted_key).unwrap_or(0);
+        let new_minted = minted
+            .checked_add(effective_amount)
+            .ok_or(MinterError::ArithmeticOverflow)?;
+        env.storage().persistent().set(&minted_key, &new_minted);
+
+        let record = ResourceRecord {
+            owner: caller.clone(),
+            resource_type: resource_type.clone(),
+            amount: effective_amount,
+            minted_at: env.ledger().timestamp(),
+        };
+
+        // ── Emit event ─────────────────────────────────────────
+        env.events().publish(
+            (symbol_short!("Minter"), symbol_short!("minted")),
+            (caller, resource_type, effective_amount),
+        );
+
+        Ok(record)
         with_guard(env, || {
             mint_resource_unguarded(env, caller, ship_id, anomaly_index, resource_type, amount)
         })
@@ -827,14 +886,7 @@ mod tests {
         let env = make_env();
         let caller = Address::generate(&env);
         let result = in_contract(&env, || {
-            ResourceMinterContract::mint_resource(
-                &env,
-                caller,
-                1,
-                0,
-                ResourceType::StellarDust,
-                0,
-            )
+            ResourceMinterContract::mint_resource(&env, caller, 1, 0, ResourceType::StellarDust, 0)
         });
         assert_eq!(result, Err(MinterError::InvalidAmount));
     }
@@ -1082,7 +1134,6 @@ mod tests {
         use crate::nebula_explorer::{CellType, NebulaCell};
         use soroban_sdk::contractimpl;
         use soroban_sdk::testutils::{Events as _, Ledger, LedgerInfo};
-        use soroban_sdk::Address as _;
 
         #[contract]
         struct Stub;
@@ -1161,7 +1212,7 @@ mod tests {
 
         /// Register a ship owned by `owner` and return its ID.
         fn ship_for(env: &Env, owner: &Address) -> u64 {
-            ship_nft::mint_ship(
+            crate::ship_nft::mint_ship(
                 env,
                 owner,
                 &soroban_sdk::symbol_short!("explorer"),
@@ -1225,7 +1276,7 @@ mod tests {
             let to = Address::generate(env);
 
             let ship_id = c.invoke(|env| ship_for(env, &from));
-            c.invoke(|env| ship_nft::transfer_ship(env, ship_id, &from, &to).unwrap());
+            c.invoke(|env| crate::ship_nft::transfer_ship(env, ship_id, &from, &to).unwrap());
 
             let layout = layout_with(env, CellType::DarkMatter, 12);
             c.invoke(|env| harvest_resources(env, ship_id, &layout).unwrap());
@@ -1356,11 +1407,11 @@ mod tests {
                 let owner = Address::generate(env);
                 let ship_id = ship_for(env, &owner);
                 let layout = layout_with(env, CellType::Wormhole, 8);
-                let before = env.events().all().len();
+                let before = env.events().all().events().len();
 
                 harvest_resources(env, ship_id, &layout).unwrap();
 
-                assert_eq!(env.events().all().len(), before + 1);
+                assert_eq!(env.events().all().events().len(), before + 1);
             });
         }
 
@@ -1470,11 +1521,11 @@ mod tests {
                 let seller = Address::generate(env);
                 let asset = soroban_sdk::symbol_short!("dust");
                 credit_resource_balance(env, &seller, &asset, 4).unwrap();
-                let before = env.events().all().len();
+                let before = env.events().all().events().len();
 
                 auto_list_on_dex(env, &seller, &asset, 2).unwrap();
 
-                assert_eq!(env.events().all().len(), before + 1);
+                assert_eq!(env.events().all().events().len(), before + 1);
             });
         }
 

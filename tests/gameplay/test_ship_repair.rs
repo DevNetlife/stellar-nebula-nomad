@@ -161,7 +161,9 @@ fn test_quote_repair_rejects_non_owner() {
 fn test_quote_repair_rejects_unknown_ship() {
     let (env, client, _admin) = setup();
     let player = Address::generate(&env);
-    let err = client.try_quote_repair(&player, &99u64, &DUST, &false).unwrap_err();
+    let err = client
+        .try_quote_repair(&player, &99u64, &DUST, &false)
+        .unwrap_err();
     assert_eq!(err, Ok(ShipRepairError::ShipNotFound));
 }
 
@@ -224,7 +226,9 @@ fn test_repair_ship_rejects_non_owner() {
     seed_ship(&env, &client.address, 1, &owner, 0, 100);
     credit_resource(&env, &client.address, &thief, DUST, 10_000);
 
-    let err = client.try_repair_ship(&thief, &1u64, &DUST, &false).unwrap_err();
+    let err = client
+        .try_repair_ship(&thief, &1u64, &DUST, &false)
+        .unwrap_err();
     assert_eq!(err, Ok(ShipRepairError::NotOwner));
     assert_eq!(read_durability(&env, &client.address, 1), 0);
     assert_eq!(read_balance(&env, &client.address, &thief, DUST), 10_000);
@@ -237,7 +241,9 @@ fn test_repair_ship_rejects_full_hull() {
     seed_ship(&env, &client.address, 1, &player, 100, 100);
     credit_resource(&env, &client.address, &player, DUST, 10_000);
 
-    let err = client.try_repair_ship(&player, &1u64, &DUST, &false).unwrap_err();
+    let err = client
+        .try_repair_ship(&player, &1u64, &DUST, &false)
+        .unwrap_err();
     assert_eq!(err, Ok(ShipRepairError::ShipAlreadyFull));
     assert_eq!(read_balance(&env, &client.address, &player, DUST), 10_000);
 }
@@ -248,7 +254,9 @@ fn test_repair_ship_rejects_unknown_ship() {
     let player = Address::generate(&env);
     credit_resource(&env, &client.address, &player, DUST, 10_000);
 
-    let err = client.try_repair_ship(&player, &99u64, &DUST, &false).unwrap_err();
+    let err = client
+        .try_repair_ship(&player, &99u64, &DUST, &false)
+        .unwrap_err();
     assert_eq!(err, Ok(ShipRepairError::ShipNotFound));
 }
 
@@ -265,7 +273,9 @@ fn test_repair_ship_is_rate_limited() {
     for ship_id in 1..=3u64 {
         client.repair_ship(&player, &ship_id, &DUST, &false);
     }
-    let err = client.try_repair_ship(&player, &4u64, &DUST, &false).unwrap_err();
+    let err = client
+        .try_repair_ship(&player, &4u64, &DUST, &false)
+        .unwrap_err();
     assert_eq!(err, Ok(ShipRepairError::RateLimitExceeded));
 }
 
@@ -294,7 +304,9 @@ fn test_repair_sink_total_stays_zero_on_failed_repairs() {
     seed_ship(&env, &client.address, 1, &player, 100, 100);
     credit_resource(&env, &client.address, &player, DUST, 10_000);
 
-    assert!(client.try_repair_ship(&player, &1u64, &DUST, &false).is_err());
+    assert!(client
+        .try_repair_ship(&player, &1u64, &DUST, &false)
+        .is_err());
     assert!(client
         .try_repair_ship(&player, &1u64, &DUST, &true)
         .is_err());

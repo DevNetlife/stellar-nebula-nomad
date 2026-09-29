@@ -76,7 +76,7 @@ pub struct SkinRarityStats {
 /// Get all available skin templates
 pub fn get_skin_templates(env: &Env) -> Vec<SkinTemplate> {
     let mut templates = Vec::new(env);
-    
+
     // Common skins (10 templates)
     templates.push_back(SkinTemplate {
         name: symbol_short!("basic"),
@@ -148,7 +148,7 @@ pub fn get_skin_templates(env: &Env) -> Vec<SkinTemplate> {
         color_secondary: 0xCCCCCC,
         price: 100,
     });
-    
+
     // Rare skins (20 templates)
     templates.push_back(SkinTemplate {
         name: symbol_short!("flame"),
@@ -290,7 +290,7 @@ pub fn get_skin_templates(env: &Env) -> Vec<SkinTemplate> {
         color_secondary: 0x5F00A8,
         price: 500,
     });
-    
+
     // Epic skins (15 templates)
     templates.push_back(SkinTemplate {
         name: symbol_short!("plasma"),
@@ -397,7 +397,7 @@ pub fn get_skin_templates(env: &Env) -> Vec<SkinTemplate> {
         color_secondary: 0x442200,
         price: 2000,
     });
-    
+
     // Legendary skins (5 templates)
     templates.push_back(SkinTemplate {
         name: symbol_short!("void"),
@@ -434,7 +434,7 @@ pub fn get_skin_templates(env: &Env) -> Vec<SkinTemplate> {
         color_secondary: 0xFFFFFF,
         price: 10000,
     });
-    
+
     templates
 }
 
@@ -450,7 +450,13 @@ pub fn get_full_catalogue(env: &Env) -> Vec<SkinCatalogueEntry> {
     let templates = get_skin_templates(env);
     let mut catalogue = Vec::new(env);
     for t in templates.iter() {
-        let preview = build_preview(env, t.name.clone(), t.rarity.clone(), t.color_primary, t.color_secondary);
+        let preview = build_preview(
+            env,
+            t.name.clone(),
+            t.rarity.clone(),
+            t.color_primary,
+            t.color_secondary,
+        );
         catalogue.push_back(SkinCatalogueEntry {
             template: t,
             preview,
@@ -471,7 +477,11 @@ pub fn search_templates(env: &Env, query: Symbol) -> Vec<SkinTemplate> {
     result
 }
 
-pub fn get_templates_by_price_range(env: &Env, min_price: i128, max_price: i128) -> Vec<SkinTemplate> {
+pub fn get_templates_by_price_range(
+    env: &Env,
+    min_price: i128,
+    max_price: i128,
+) -> Vec<SkinTemplate> {
     let all = get_skin_templates(env);
     let mut result = Vec::new(env);
     for t in all.iter() {
@@ -567,9 +577,7 @@ pub fn get_rarity_stats(env: &Env) -> SkinRarityStats {
 
 /// Look up a template by its `name` symbol.
 pub fn get_template(env: &Env, name: Symbol) -> Option<SkinTemplate> {
-    get_skin_templates(env)
-        .iter()
-        .find(|t| t.name == name)
+    get_skin_templates(env).iter().find(|t| t.name == name)
 }
 
 /// All templates of one rarity tier.
@@ -614,12 +622,7 @@ pub fn build_preview(
     let mut gradient = Vec::new(env);
     let last_stop = PREVIEW_GRADIENT_STOPS - 1;
     for step in 0..PREVIEW_GRADIENT_STOPS {
-        gradient.push_back(lerp_color(
-            color_primary,
-            color_secondary,
-            step,
-            last_stop,
-        ));
+        gradient.push_back(lerp_color(color_primary, color_secondary, step, last_stop));
     }
 
     // The seed mixes both colours and the rarity's layer count so visually
@@ -709,13 +712,9 @@ mod tests {
 
     #[test]
     fn floor_prices_increase_with_rarity() {
-        assert!(
-            rarity_floor_price(&SkinRarity::Common) < rarity_floor_price(&SkinRarity::Rare)
-        );
+        assert!(rarity_floor_price(&SkinRarity::Common) < rarity_floor_price(&SkinRarity::Rare));
         assert!(rarity_floor_price(&SkinRarity::Rare) < rarity_floor_price(&SkinRarity::Epic));
-        assert!(
-            rarity_floor_price(&SkinRarity::Epic) < rarity_floor_price(&SkinRarity::Legendary)
-        );
+        assert!(rarity_floor_price(&SkinRarity::Epic) < rarity_floor_price(&SkinRarity::Legendary));
     }
 
     #[test]
@@ -730,8 +729,7 @@ mod tests {
     #[test]
     fn drop_weights_decrease_with_rarity() {
         assert!(
-            rarity_drop_weight_bps(&SkinRarity::Common)
-                > rarity_drop_weight_bps(&SkinRarity::Rare)
+            rarity_drop_weight_bps(&SkinRarity::Common) > rarity_drop_weight_bps(&SkinRarity::Rare)
         );
         assert!(
             rarity_drop_weight_bps(&SkinRarity::Rare) > rarity_drop_weight_bps(&SkinRarity::Epic)

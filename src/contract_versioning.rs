@@ -1,8 +1,6 @@
 //! Contract version metadata and compatibility checks.
 //!
-use soroban_sdk::{
-    contracterror, contracttype, symbol_short, Address, Bytes, Env, Vec
-};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Bytes, Env, Vec};
 /// Current contract version (starts at 1 at deployment).
 pub const CURRENT_VERSION: u32 = 1;
 
@@ -152,9 +150,7 @@ pub fn migrate_data(
         record_count: batch.len() as u32,
     };
 
-    env.storage()
-        .instance()
-        .set(&status_key, &record);
+    env.storage().instance().set(&status_key, &record);
 
     env.events().publish(
         (symbol_short!("version"), symbol_short!("migrated")),

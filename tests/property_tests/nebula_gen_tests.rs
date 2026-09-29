@@ -5,7 +5,7 @@ use proptest::test_runner::{Config as ProptestConfig, TestRunner};
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::{symbol_short, BytesN, Env};
 use stellar_nebula_nomad::{
-    nebula_gen::{Anomaly, NebulaLayout, NebulaError, MAX_REGION_ID, MIN_SHIP_ID},
+    nebula_gen::{Anomaly, NebulaError, NebulaLayout, MAX_REGION_ID, MIN_SHIP_ID},
     NebulaNomadContract, NebulaNomadContractClient,
 };
 
@@ -22,7 +22,7 @@ fn make_env() -> (Env, NebulaNomadContractClient<'static>) {
         min_persistent_entry_ttl: 1_000,
         max_entry_ttl: 10_000,
     });
-    let contract_id = env.register_contract(None, NebulaNomadContract);
+    let contract_id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &contract_id);
     (env, client)
 }
@@ -60,7 +60,8 @@ fn prop_nebula_gen_deterministic_same_seed() {
             let layout2 = client.generate_nebula_layout(&seed2, &player);
 
             prop_assert_eq!(
-                layout1.total_energy, layout2.total_energy,
+                layout1.total_energy,
+                layout2.total_energy,
                 "layouts with same seed must have identical energy"
             );
             prop_assert_eq!(
@@ -80,35 +81,39 @@ fn prop_nebula_gen_different_seeds_likely_different() {
     let mut runner = TestRunner::new(config);
 
     runner
-        .run((arbitrary_seed(), arbitrary_seed()), |(seed1_arr, seed2_arr)| {
-            if seed1_arr == seed2_arr {
-                return Ok(());
-            }
+        .run(
+            (arbitrary_seed(), arbitrary_seed()),
+            |(seed1_arr, seed2_arr)| {
+                if seed1_arr == seed2_arr {
+                    return Ok(());
+                }
 
-            let (env, client) = make_env();
-            let player = soroban_sdk::Address::generate(&env);
+                let (env, client) = make_env();
+                let player = soroban_sdk::Address::generate(&env);
 
-            client.initialize_profile(&player);
-            let metadata = [0u8; 4];
-            let _ship = client.mint_ship(&player, &symbol_short!("explorer"), &metadata);
+                client.initialize_profile(&player);
+                let metadata = [0u8; 4];
+                let _ship = client.mint_ship(&player, &symbol_short!("explorer"), &metadata);
 
-            let seed1 = BytesN::from_array(&env, &seed1_arr);
-            let layout1 = client.generate_nebula_layout(&seed1, &player);
+                let seed1 = BytesN::from_array(&env, &seed1_arr);
+                let layout1 = client.generate_nebula_layout(&seed1, &player);
 
-            let seed2 = BytesN::from_array(&env, &seed2_arr);
-            let layout2 = client.generate_nebula_layout(&seed2, &player);
+                let seed2 = BytesN::from_array(&env, &seed2_arr);
+                let layout2 = client.generate_nebula_layout(&seed2, &player);
 
-            if layout1.total_energy != layout2.total_energy {
-                return Ok(());
-            }
+                if layout1.total_energy != layout2.total_energy {
+                    return Ok(());
+                }
 
-            prop_assert_ne!(
-                layout1.seed, layout2.seed,
-                "different seeds should produce different layouts (or be same by chance)"
-            );
+                prop_assert_ne!(
+                    layout1.seed,
+                    layout2.seed,
+                    "different seeds should produce different layouts (or be same by chance)"
+                );
 
-            Ok(())
-        })
+                Ok(())
+            },
+        )
         .unwrap();
 }
 
@@ -133,10 +138,7 @@ fn prop_nebula_layout_dimensions_valid() {
                 layout.width > 0 && layout.height > 0,
                 "layout dimensions must be positive"
             );
-            prop_assert!(
-                layout.cells.len() > 0,
-                "layout must have at least one cell"
-            );
+            prop_assert!(layout.cells.len() > 0, "layout must have at least one cell");
 
             Ok(())
         })
@@ -227,7 +229,8 @@ fn prop_nebula_timestamp_valid() {
 
             let current_timestamp = env.ledger().timestamp();
             prop_assert_eq!(
-                layout.timestamp, current_timestamp,
+                layout.timestamp,
+                current_timestamp,
                 "layout timestamp must equal ledger timestamp"
             );
 
@@ -253,10 +256,7 @@ fn prop_nebula_seed_preserved() {
             let seed = BytesN::from_array(&env, &seed_arr);
             let layout = client.generate_nebula_layout(&seed, &player);
 
-            prop_assert_eq!(
-                layout.seed, seed,
-                "layout seed must match input seed"
-            );
+            prop_assert_eq!(layout.seed, seed, "layout seed must match input seed");
 
             Ok(())
         })
@@ -348,7 +348,8 @@ fn prop_nebula_consistency_across_calls() {
             let layout2 = client.generate_nebula_layout(&seed, &player);
 
             prop_assert_eq!(
-                layout1.total_energy, layout2.total_energy,
+                layout1.total_energy,
+                layout2.total_energy,
                 "repeated calls with same seed must yield same energy"
             );
             prop_assert_eq!(

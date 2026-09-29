@@ -87,10 +87,7 @@ pub fn classify_anomaly(
     Ok(record)
 }
 
-pub fn classify_batch(
-    env: &Env,
-    records: Vec<(u64, Vec<u32>)>,
-) -> Vec<ClassificationRecord> {
+pub fn classify_batch(env: &Env, records: Vec<(u64, Vec<u32>)>) -> Vec<ClassificationRecord> {
     let mut out = Vec::new(env);
 
     for rec in records.into_iter() {
@@ -141,7 +138,11 @@ pub fn refine_classification(
 
     env.events().publish(
         (symbol_short!("anomaly"), symbol_short!("refined")),
-        (anomaly_id, existing.anomaly_type.clone(), existing.confidence),
+        (
+            anomaly_id,
+            existing.anomaly_type.clone(),
+            existing.confidence,
+        ),
     );
 
     Ok(existing)
@@ -165,7 +166,7 @@ mod tests {
 
     fn make_env() -> (Env, Address) {
         let env = Env::default();
-        let id = env.register_contract(None, Stub);
+        let id = env.register(Stub, ());
         (env, id)
     }
 

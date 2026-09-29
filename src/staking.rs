@@ -162,14 +162,21 @@ pub fn get_default_tier_configs(env: &Env) -> Vec<StakingTierConfig> {
     configs
 }
 
-pub fn set_tier_config(env: &Env, admin: &Address, config: StakingTierConfig) -> Result<(), StakingError> {
+pub fn set_tier_config(
+    env: &Env,
+    admin: &Address,
+    config: StakingTierConfig,
+) -> Result<(), StakingError> {
     admin.require_auth();
-    env.storage().persistent().set(&DataKey::TierConfig(config.tier.clone()), &config);
+    env.storage()
+        .persistent()
+        .set(&DataKey::TierConfig(config.tier.clone()), &config);
     Ok(())
 }
 
 pub fn get_tier_config(env: &Env, tier: StakingTier) -> StakingTierConfig {
-    env.storage().persistent()
+    env.storage()
+        .persistent()
         .get(&DataKey::TierConfig(tier.clone()))
         .unwrap_or_else(|| {
             let configs = get_default_tier_configs(env);
@@ -199,27 +206,58 @@ pub fn get_variable_apy(env: &Env, amount: i128, duration_ledgers: u32) -> u32 {
     let config = get_tier_config(env, tier);
     let base_apy = config.apy_bps;
 
-    let duration_bonus = if duration_ledgers > 5000 { 500 }
-        else if duration_ledgers > 2000 { 300 }
-        else if duration_ledgers > 1000 { 150 }
-        else { 0 };
+    let duration_bonus = if duration_ledgers > 5000 {
+        500
+    } else if duration_ledgers > 2000 {
+        300
+    } else if duration_ledgers > 1000 {
+        150
+    } else {
+        0
+    };
 
-    let amount_bonus = if amount >= 1_000_000 { 1000 }
-        else if amount >= 500_000 { 500 }
-        else if amount >= 100_000 { 200 }
-        else { 0 };
+    let amount_bonus = if amount >= 1_000_000 {
+        1000
+    } else if amount >= 500_000 {
+        500
+    } else if amount >= 100_000 {
+        200
+    } else {
+        0
+    };
 
-    base_apy.saturating_add(duration_bonus).saturating_add(amount_bonus)
+    base_apy
+        .saturating_add(duration_bonus)
+        .saturating_add(amount_bonus)
 }
 
 pub fn get_global_staking_stats(env: &Env) -> GlobalStakingStats {
-    let total_staked: i128 = env.storage().persistent().get(&DataKey::TotalStaked).unwrap_or(0);
-    let staker_count: u64 = env.storage().persistent().get(&DataKey::StakerCount).unwrap_or(0);
-    let total_rewards: i128 = env.storage().persistent().get(&DataKey::TotalRewardsPaid).unwrap_or(0);
+    let total_staked: i128 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::TotalStaked)
+        .unwrap_or(0);
+    let staker_count: u64 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::StakerCount)
+        .unwrap_or(0);
+    let total_rewards: i128 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::TotalRewardsPaid)
+        .unwrap_or(0);
     let avg_apy = if total_staked > 0 { 2000u32 } else { 0u32 };
 
     let mut breakdown = Vec::new(env);
-    let tiers = soroban_sdk::vec![env, StakingTier::Flexible, StakingTier::Bronze, StakingTier::Silver, StakingTier::Gold, StakingTier::Diamond];
+    let tiers = soroban_sdk::vec![
+        env,
+        StakingTier::Flexible,
+        StakingTier::Bronze,
+        StakingTier::Silver,
+        StakingTier::Gold,
+        StakingTier::Diamond
+    ];
     for t in tiers {
         breakdown.push_back((t, 0u64, 0i128));
     }
@@ -266,7 +304,11 @@ pub fn stake_with_tier(
 
     let apy = get_variable_apy(&env, amount, config.lock_duration_ledgers);
 
-    if env.storage().persistent().has(&DataKey::Stake(staker.clone())) {
+    if env
+        .storage()
+        .persistent()
+        .has(&DataKey::Stake(staker.clone()))
+    {
         return Err(StakingError::InvalidAmount);
     }
 
@@ -279,15 +321,33 @@ pub fn stake_with_tier(
         apy_bps: apy,
     };
 
-    env.storage().persistent().set(&DataKey::Stake(staker.clone()), &record);
-    env.storage().persistent().set(&DataKey::StakeTier(staker.clone()), &tier);
+    env.storage()
+        .persistent()
+        .set(&DataKey::Stake(staker.clone()), &record);
+    env.storage()
+        .persistent()
+        .set(&DataKey::StakeTier(staker.clone()), &tier);
 
-    let total: i128 = env.storage().persistent().get(&DataKey::TotalStaked).unwrap_or(0);
-    let new_total = total.checked_add(amount).ok_or(StakingError::InvalidAmount)?;
-    env.storage().persistent().set(&DataKey::TotalStaked, &new_total);
+    let total: i128 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::TotalStaked)
+        .unwrap_or(0);
+    let new_total = total
+        .checked_add(amount)
+        .ok_or(StakingError::InvalidAmount)?;
+    env.storage()
+        .persistent()
+        .set(&DataKey::TotalStaked, &new_total);
 
-    let count: u64 = env.storage().persistent().get(&DataKey::StakerCount).unwrap_or(0);
-    env.storage().persistent().set(&DataKey::StakerCount, &count.saturating_add(1));
+    let count: u64 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::StakerCount)
+        .unwrap_or(0);
+    env.storage()
+        .persistent()
+        .set(&DataKey::StakerCount, &count.saturating_add(1));
 
     env.events().publish(
         (symbol_short!("stake"), symbol_short!("v2_stk")),
@@ -300,28 +360,54 @@ pub fn stake_with_tier(
 pub fn unstake_v2(env: Env, staker: Address) -> Result<EarlyWithdrawalResult, StakingError> {
     staker.require_auth();
 
-    let stake: StakeRecord = env.storage().persistent()
+    let stake: StakeRecord = env
+        .storage()
+        .persistent()
         .get(&DataKey::Stake(staker.clone()))
         .ok_or(StakingError::NoActiveStake)?;
 
     let current_ledger = env.ledger().sequence();
     let result = if current_ledger < stake.unlock_ledger {
         let penalty_result = calculate_early_withdraw_penalty(&env, &stake);
-        env.storage().persistent().remove(&DataKey::Stake(staker.clone()));
-        let total: i128 = env.storage().persistent().get(&DataKey::TotalStaked).unwrap_or(0);
-        let new_total = total.checked_sub(stake.amount).ok_or(StakingError::InvalidAmount)?;
-        env.storage().persistent().set(&DataKey::TotalStaked, &new_total);
+        env.storage()
+            .persistent()
+            .remove(&DataKey::Stake(staker.clone()));
+        let total: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::TotalStaked)
+            .unwrap_or(0);
+        let new_total = total
+            .checked_sub(stake.amount)
+            .ok_or(StakingError::InvalidAmount)?;
+        env.storage()
+            .persistent()
+            .set(&DataKey::TotalStaked, &new_total);
 
         env.events().publish(
             (symbol_short!("stake"), symbol_short!("early")),
-            (staker.clone(), penalty_result.penalty, penalty_result.penalty_bps),
+            (
+                staker.clone(),
+                penalty_result.penalty,
+                penalty_result.penalty_bps,
+            ),
         );
         penalty_result
     } else {
-        env.storage().persistent().remove(&DataKey::Stake(staker.clone()));
-        let total: i128 = env.storage().persistent().get(&DataKey::TotalStaked).unwrap_or(0);
-        let new_total = total.checked_sub(stake.amount).ok_or(StakingError::InvalidAmount)?;
-        env.storage().persistent().set(&DataKey::TotalStaked, &new_total);
+        env.storage()
+            .persistent()
+            .remove(&DataKey::Stake(staker.clone()));
+        let total: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::TotalStaked)
+            .unwrap_or(0);
+        let new_total = total
+            .checked_sub(stake.amount)
+            .ok_or(StakingError::InvalidAmount)?;
+        env.storage()
+            .persistent()
+            .set(&DataKey::TotalStaked, &new_total);
 
         EarlyWithdrawalResult {
             amount_returned: stake.amount,
@@ -343,7 +429,8 @@ pub fn get_stake_v2(env: Env, address: Address) -> Option<StakeRecord> {
 }
 
 pub fn get_staking_tier(env: Env, address: Address) -> StakingTier {
-    env.storage().persistent()
+    env.storage()
+        .persistent()
         .get(&DataKey::StakeTier(address))
         .unwrap_or(StakingTier::Flexible)
 }
@@ -361,11 +448,7 @@ pub fn initialize(
 ) -> Result<(), StakingError> {
     admin.require_auth();
 
-    if env
-        .storage()
-        .instance()
-        .has(&DataKey::Admin)
-    {
+    if env.storage().instance().has(&DataKey::Admin) {
         return Err(StakingError::AlreadyInitialized);
     }
 
@@ -610,9 +693,7 @@ pub fn undelegate(env: Env, delegator: Address) -> Result<(), StakingError> {
 
 /// Get the stake record for an address, or None if no active stake.
 pub fn get_stake(env: Env, address: Address) -> Option<StakeRecord> {
-    env.storage()
-        .persistent()
-        .get(&DataKey::Stake(address))
+    env.storage().persistent().get(&DataKey::Stake(address))
 }
 
 /// Get the total amount staked across all users.

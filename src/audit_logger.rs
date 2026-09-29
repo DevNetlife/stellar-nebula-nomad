@@ -76,15 +76,29 @@ pub fn log_audit_event(
 
     env.events().publish(
         (symbol_short!("audit"), symbol_short!("entry")),
-        (entry.id, entry.timestamp, entry.actor.clone(), entry.action.clone(), entry.details.clone()),
+        (
+            entry.id,
+            entry.timestamp,
+            entry.actor.clone(),
+            entry.action.clone(),
+            entry.details.clone(),
+        ),
     );
 
     Ok(entry)
 }
 
-pub fn query_audit_logs(env: &Env, filter: Symbol, limit: u32) -> Result<Vec<AuditEntry>, AuditLoggerError> {
+pub fn query_audit_logs(
+    env: &Env,
+    filter: Symbol,
+    limit: u32,
+) -> Result<Vec<AuditEntry>, AuditLoggerError> {
     let capped_limit = core::cmp::min(limit, MAX_QUERY_LIMIT);
-    let total: u64 = env.storage().instance().get(&AuditLoggerKey::Counter).unwrap_or(0);
+    let total: u64 = env
+        .storage()
+        .instance()
+        .get(&AuditLoggerKey::Counter)
+        .unwrap_or(0);
 
     let max = if capped_limit == 0 {
         core::cmp::min(total, MAX_QUERY_LIMIT as u64)
@@ -111,13 +125,16 @@ pub fn query_audit_logs(env: &Env, filter: Symbol, limit: u32) -> Result<Vec<Aud
 }
 
 pub fn get_audit_count(env: &Env) -> u64 {
-    env.storage().instance().get(&AuditLoggerKey::Counter).unwrap_or(0)
+    env.storage()
+        .instance()
+        .get(&AuditLoggerKey::Counter)
+        .unwrap_or(0)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::{testutils::Address as _, contract, contractimpl};
+    use soroban_sdk::{contract, contractimpl, testutils::Address as _};
 
     #[contract]
     struct Stub;
@@ -143,8 +160,7 @@ mod tests {
             assert_eq!(entry.actor, Some(player.clone()));
             assert_eq!(entry.action, action);
 
-            let results = query_audit_logs(&env, action, 10)
-                .expect("query should succeed");
+            let results = query_audit_logs(&env, action, 10).expect("query should succeed");
             assert_eq!(results.len(), 1);
             assert_eq!(results.get(0).unwrap().id, entry.id);
         });
@@ -162,8 +178,7 @@ mod tests {
                 let _ = log_audit_event(&env, Some(&player), action.clone(), details.clone());
             }
 
-            let results = query_audit_logs(&env, action, 3)
-                .expect("query should succeed");
+            let results = query_audit_logs(&env, action, 3).expect("query should succeed");
             assert_eq!(results.len(), 3);
         });
     }
@@ -181,8 +196,7 @@ mod tests {
             }
 
             let huge_limit = MAX_QUERY_LIMIT + 5000;
-            let results = query_audit_logs(&env, action, huge_limit)
-                .expect("query should succeed");
+            let results = query_audit_logs(&env, action, huge_limit).expect("query should succeed");
             assert!(results.len() as u32 <= MAX_QUERY_LIMIT);
         });
     }

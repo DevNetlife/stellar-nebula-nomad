@@ -42,11 +42,23 @@ fn test_initialize_staking() {
     let min_stake = 1_000_000;
     let lock_duration = 50;
 
-    let result = staking::initialize(env.clone(), admin.clone(), token.clone(), min_stake, lock_duration);
+    let result = staking::initialize(
+        env.clone(),
+        admin.clone(),
+        token.clone(),
+        min_stake,
+        lock_duration,
+    );
     assert!(result.is_ok());
 
     // Verify initialization cannot happen twice.
-    let result2 = staking::initialize(env.clone(), admin.clone(), token.clone(), min_stake, lock_duration);
+    let result2 = staking::initialize(
+        env.clone(),
+        admin.clone(),
+        token.clone(),
+        min_stake,
+        lock_duration,
+    );
     assert_eq!(result2, Err(StakingError::AlreadyInitialized));
 }
 

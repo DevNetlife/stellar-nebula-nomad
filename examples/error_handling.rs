@@ -121,6 +121,10 @@ fn main() {
     }
     let zero = BytesN::from_array(&env, &[0u8; 32]);
     if let Err(Ok(e)) = nebula.try_generate_validated_nebula_layout(&pilot, &1u64, &1u64, &zero) {
-        println!("[nebula_gen #{:>2}] {e:?} -> {:?}", e as u32, classify_nebula(e));
+        println!(
+            "[nebula_gen #{:>2}] {e:?} -> {:?}",
+            e as u32,
+            classify_nebula(e)
+        );
     }
 }

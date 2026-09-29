@@ -45,12 +45,18 @@ fn main() {
     // `check_permission(&env, &caller, action)`.
     let action = symbol_short!("hide_post");
     client.grant_permission(&admin, &mod_role, &action);
-    println!("moderator can hide posts: {}", client.has_permission(&mod_role, &action));
+    println!(
+        "moderator can hide posts: {}",
+        client.has_permission(&mod_role, &action)
+    );
 
     // ── Step 4: Only the admin can grant ─────────────────────────────────
     let result = client.try_grant_role(&moderator, &mod_role, &indexer, &None);
     assert_eq!(result, Err(Ok(AccessControlError::AdminRequired)));
-    println!("Non-admin grant rejected: {:?}", AccessControlError::AdminRequired);
+    println!(
+        "Non-admin grant rejected: {:?}",
+        AccessControlError::AdminRequired
+    );
 
     // Expiry must be a future ledger sequence.
     let past = env.ledger().sequence();
@@ -61,7 +67,10 @@ fn main() {
 
     // ── Step 5: Revoke ───────────────────────────────────────────────────
     client.revoke_role(&admin, &mod_role, &moderator);
-    println!("moderator has role after revoke: {}", client.has_role(&mod_role, &moderator));
+    println!(
+        "moderator has role after revoke: {}",
+        client.has_role(&mod_role, &moderator)
+    );
 
     // ── Step 6: Hand over admin ──────────────────────────────────────────
     let new_admin = Address::generate(&env);

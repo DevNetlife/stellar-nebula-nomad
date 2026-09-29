@@ -222,7 +222,11 @@ pub fn list_ship(
     if price <= 0 {
         return Err(MarketplaceError::InvalidPrice);
     }
-    if env.storage().persistent().has(&MarketplaceKey::Listing(ship_id)) {
+    if env
+        .storage()
+        .persistent()
+        .has(&MarketplaceKey::Listing(ship_id))
+    {
         return Err(MarketplaceError::AlreadyListed);
     }
 
@@ -296,13 +300,21 @@ pub fn buy_ship(env: &Env, buyer: &Address, ship_id: u64) -> Result<(), Marketpl
         .persistent()
         .get(&MarketplaceKey::SellerCount(listing.seller.clone()))
         .unwrap_or(1);
-    env.storage()
-        .persistent()
-        .set(&MarketplaceKey::SellerCount(listing.seller.clone()), &count.saturating_sub(1));
+    env.storage().persistent().set(
+        &MarketplaceKey::SellerCount(listing.seller.clone()),
+        &count.saturating_sub(1),
+    );
 
     env.events().publish(
         (symbol_short!("market"), symbol_short!("sold")),
-        (buyer.clone(), listing.seller.clone(), ship_id, listing.price, royalty, seller_proceeds),
+        (
+            buyer.clone(),
+            listing.seller.clone(),
+            ship_id,
+            listing.price,
+            royalty,
+            seller_proceeds,
+        ),
     );
 
     Ok(())
@@ -330,9 +342,10 @@ pub fn cancel_listing(env: &Env, seller: &Address, ship_id: u64) -> Result<(), M
         .persistent()
         .get(&MarketplaceKey::SellerCount(seller.clone()))
         .unwrap_or(1);
-    env.storage()
-        .persistent()
-        .set(&MarketplaceKey::SellerCount(seller.clone()), &count.saturating_sub(1));
+    env.storage().persistent().set(
+        &MarketplaceKey::SellerCount(seller.clone()),
+        &count.saturating_sub(1),
+    );
 
     env.events().publish(
         (symbol_short!("market"), symbol_short!("cancel")),
@@ -437,10 +450,7 @@ pub fn get_creator_withdrawn(env: &Env, creator: &Address) -> i128 {
 ///
 /// Zeroes the balance before emitting, so a re-entrant call finds nothing left
 /// to withdraw.
-pub fn withdraw_creator_earnings(
-    env: &Env,
-    creator: &Address,
-) -> Result<i128, MarketplaceError> {
+pub fn withdraw_creator_earnings(env: &Env, creator: &Address) -> Result<i128, MarketplaceError> {
     creator.require_auth();
 
     let owed = get_creator_earnings(env, creator);
@@ -623,7 +633,11 @@ pub fn buy_cosmetic(
             env.storage()
                 .persistent()
                 .set(&MarketplaceKey::CreatorEarnings(creator.clone()), &earnings);
-            bump_i128(env, MarketplaceKey::CosmeticRoyaltiesPaid, split.creator_royalty)?;
+            bump_i128(
+                env,
+                MarketplaceKey::CosmeticRoyaltiesPaid,
+                split.creator_royalty,
+            )?;
             split.creator_royalty
         }
         _ => 0,

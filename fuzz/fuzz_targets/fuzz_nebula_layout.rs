@@ -8,7 +8,7 @@ use stellar_nebula_nomad::{NebulaNomadContract, NebulaNomadContractClient};
 fuzz_target!(|seed_arr: [u8; 32]| {
     let env = Env::default();
     env.mock_all_auths();
-    let id = env.register_contract(None, NebulaNomadContract);
+    let id = env.register(NebulaNomadContract, ());
     let client = NebulaNomadContractClient::new(&env, &id);
     let player = Address::generate(&env);
     client.initialize_profile(&player);

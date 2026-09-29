@@ -44,7 +44,10 @@ pub struct EventFilter {
 /// Emits an event so an off-chain indexer can respond with live data.
 pub fn query_account_info(env: &Env, address: &Address) -> AccountInfo {
     env.events().publish(
-        (soroban_sdk::symbol_short!("horizon"), soroban_sdk::symbol_short!("query")),
+        (
+            soroban_sdk::symbol_short!("horizon"),
+            soroban_sdk::symbol_short!("query"),
+        ),
         address.clone(),
     );
 
@@ -59,13 +62,12 @@ pub fn query_account_info(env: &Env, address: &Address) -> AccountInfo {
 
 /// Emit a transaction for Horizon indexing.
 /// Returns a `TransactionResult` confirming the submission was recorded.
-pub fn submit_transaction(
-    env: &Env,
-    tx_hash: String,
-    operation: String,
-) -> TransactionResult {
+pub fn submit_transaction(env: &Env, tx_hash: String, operation: String) -> TransactionResult {
     env.events().publish(
-        (soroban_sdk::symbol_short!("horizon"), soroban_sdk::symbol_short!("tx")),
+        (
+            soroban_sdk::symbol_short!("horizon"),
+            soroban_sdk::symbol_short!("tx"),
+        ),
         (tx_hash.clone(), operation.clone()),
     );
 
@@ -89,15 +91,25 @@ pub fn emit_tx_for_indexing(env: &Env, tx_hash: String, operation: String) {
 /// indexers know to forward matching events to this subscriber.
 pub fn stream_events(env: &Env, subscriber: &Address, filter: EventFilter) {
     env.events().publish(
-        (soroban_sdk::symbol_short!("horizon"), soroban_sdk::symbol_short!("stream")),
-        (subscriber.clone(), filter.topic.clone(), filter.sub_topic.clone()),
+        (
+            soroban_sdk::symbol_short!("horizon"),
+            soroban_sdk::symbol_short!("stream"),
+        ),
+        (
+            subscriber.clone(),
+            filter.topic.clone(),
+            filter.sub_topic.clone(),
+        ),
     );
 }
 
 /// Cancel an active event-stream subscription for `subscriber`.
 pub fn unsubscribe_stream(env: &Env, subscriber: &Address) {
     env.events().publish(
-        (soroban_sdk::symbol_short!("horizon"), soroban_sdk::symbol_short!("unsub")),
+        (
+            soroban_sdk::symbol_short!("horizon"),
+            soroban_sdk::symbol_short!("unsub"),
+        ),
         subscriber.clone(),
     );
 }
@@ -105,8 +117,7 @@ pub fn unsubscribe_stream(env: &Env, subscriber: &Address) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::testutils::{Address as _, Events};
-    use soroban_sdk::{vec, IntoVal, TryFromVal};
+    use soroban_sdk::testutils::Address as _;
 
     // ── Account info ──────────────────────────────────────────────────────────
 
@@ -126,16 +137,15 @@ mod tests {
         let address = Address::generate(&env);
         query_account_info(&env, &address);
 
-        let events = env.events().all();
-        assert!(!events.is_empty(), "expected at least one event");
-        let (_contract_id, topics, _data) = events.get(0).unwrap();
+        let topics =
+            crate::test_helpers::event_topics(&env, 0).expect("expected at least one event");
         assert_eq!(
-            soroban_sdk::Symbol::try_from_val(&env, &topics.get(0).unwrap()).unwrap(),
-            soroban_sdk::symbol_short!("horizon")
+            topics.get(0).map(std::string::String::as_str),
+            Some("horizon")
         );
         assert_eq!(
-            soroban_sdk::Symbol::try_from_val(&env, &topics.get(1).unwrap()).unwrap(),
-            soroban_sdk::symbol_short!("query")
+            topics.get(1).map(std::string::String::as_str),
+            Some("query")
         );
     }
 
@@ -159,13 +169,8 @@ mod tests {
         let operation = String::from_str(&env, "mint_ship");
         submit_transaction(&env, tx_hash, operation);
 
-        let events = env.events().all();
-        assert!(!events.is_empty());
-        let (_contract_id, topics, _data) = events.get(0).unwrap();
-        assert_eq!(
-            soroban_sdk::Symbol::try_from_val(&env, &topics.get(1).unwrap()).unwrap(),
-            soroban_sdk::symbol_short!("tx")
-        );
+        let topics = crate::test_helpers::event_topics(&env, 0).unwrap();
+        assert_eq!(topics.get(1).map(std::string::String::as_str), Some("tx"));
     }
 
     #[test]
@@ -175,7 +180,7 @@ mod tests {
         let operation = String::from_str(&env, "scan_nebula");
         // Should not panic — legacy wrapper.
         emit_tx_for_indexing(&env, tx_hash, operation);
-        assert!(!env.events().all().is_empty());
+        assert!(crate::test_helpers::event_count(&env) > 0);
     }
 
     #[test]
@@ -191,7 +196,7 @@ mod tests {
             String::from_str(&env, "tx2"),
             String::from_str(&env, "op2"),
         );
-        assert_eq!(env.events().all().len(), 2);
+        assert_eq!(crate::test_helpers::event_count(&env), 2);
     }
 
     // ── Event streaming ───────────────────────────────────────────────────────
@@ -206,12 +211,10 @@ mod tests {
         };
         stream_events(&env, &subscriber, filter);
 
-        let events = env.events().all();
-        assert!(!events.is_empty());
-        let (_contract_id, topics, _data) = events.get(0).unwrap();
+        let topics = crate::test_helpers::event_topics(&env, 0).unwrap();
         assert_eq!(
-            soroban_sdk::Symbol::try_from_val(&env, &topics.get(1).unwrap()).unwrap(),
-            soroban_sdk::symbol_short!("stream")
+            topics.get(1).map(std::string::String::as_str),
+            Some("stream")
         );
     }
 
@@ -224,7 +227,7 @@ mod tests {
             sub_topic: String::from_str(&env, ""),
         };
         stream_events(&env, &subscriber, filter);
-        assert!(!env.events().all().is_empty());
+        assert!(crate::test_helpers::event_count(&env) > 0);
     }
 
     #[test]
@@ -233,12 +236,10 @@ mod tests {
         let subscriber = Address::generate(&env);
         unsubscribe_stream(&env, &subscriber);
 
-        let events = env.events().all();
-        assert!(!events.is_empty());
-        let (_contract_id, topics, _data) = events.get(0).unwrap();
+        let topics = crate::test_helpers::event_topics(&env, 0).unwrap();
         assert_eq!(
-            soroban_sdk::Symbol::try_from_val(&env, &topics.get(1).unwrap()).unwrap(),
-            soroban_sdk::symbol_short!("unsub")
+            topics.get(1).map(std::string::String::as_str),
+            Some("unsub")
         );
     }
 
@@ -252,7 +253,7 @@ mod tests {
         };
         stream_events(&env, &subscriber, filter);
         unsubscribe_stream(&env, &subscriber);
-        assert_eq!(env.events().all().len(), 2);
+        assert_eq!(crate::test_helpers::event_count(&env), 2);
     }
 
     // ── Combined workflow ─────────────────────────────────────────────────────
@@ -282,6 +283,6 @@ mod tests {
         stream_events(&env, &address, filter);
 
         // All three operations each emit one event.
-        assert_eq!(env.events().all().len(), 3);
+        assert_eq!(crate::test_helpers::event_count(&env), 3);
     }
 }
