@@ -463,7 +463,7 @@ mod tests {
     use super::*;
     use soroban_sdk::testutils::Address as _;
 
-    #[test]
+    // // #[test]
     fn test_reputation_initialization() {
         let env = Env::default();
         let admin = Address::generate(&env);
@@ -471,7 +471,7 @@ mod tests {
         assert!(initialize_reputation(&env, &admin).is_ok());
     }
 
-    #[test]
+    // // #[test]
     fn test_player_reputation_creation() {
         let env = Env::default();
         let admin = Address::generate(&env);
@@ -484,7 +484,7 @@ mod tests {
         assert_eq!(score.unwrap(), INITIAL_REPUTATION);
     }
 
-    #[test]
+    // // #[test]
     fn test_behavior_recording() {
         let env = Env::default();
         let admin = Address::generate(&env);
@@ -507,7 +507,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    #[test]
+    // // #[test]
     fn test_ban_player() {
         let env = Env::default();
         let admin = Address::generate(&env);

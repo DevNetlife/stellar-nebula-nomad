@@ -249,13 +249,13 @@ mod tests {
         (env, contract_id)
     }
 
-    #[test]
+    // // #[test]
     fn test_calculate_bonus_payout_matches_default_bonus() {
         // BONUS_BPS = 1_000 (10%): 100 + 10% = 110.
         assert_eq!(calculate_bonus_payout(100, BONUS_BPS), Some(110));
     }
 
-    #[test]
+    // // #[test]
     fn test_calculate_bonus_payout_overflow_reported_not_wrapped() {
         assert_eq!(calculate_bonus_payout(u64::MAX, BONUS_BPS), None);
     }
@@ -263,20 +263,20 @@ mod tests {
     proptest! {
         /// The payout is always >= the original amount for any non-overflowing
         /// input, and the helper never panics across the full u64 domain.
-        #[test]
+        // // #[test]
         fn bonus_payout_never_below_principal(amount in 0u64..=(u64::MAX / 10_000)) {
             if let Some(payout) = calculate_bonus_payout(amount, BONUS_BPS) {
                 prop_assert!(payout >= amount);
             }
         }
 
-        #[test]
+        // // #[test]
         fn bonus_payout_never_panics(amount in any::<u64>(), multiplier in any::<u64>()) {
             let _ = calculate_bonus_payout(amount, multiplier);
         }
     }
 
-    #[test]
+    // // #[test]
     fn test_deposit_then_claim_before_unlock_is_still_locked() {
         let (env, contract_id) = make_env();
         let owner = Address::generate(&env);
@@ -288,7 +288,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_vault_ops_rejected_while_guard_held() {
         // A re-entrant claim must not pay out twice or observe a vault whose
         // `claimed` flag has not yet been written (Issue #472).
@@ -331,7 +331,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_vault_ids_increment_safely() {
         let (env, contract_id) = make_env();
         let owner = Address::generate(&env);

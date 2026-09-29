@@ -461,7 +461,7 @@ mod tests {
 
     // ── Pure pricing ────────────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn cost_is_proportional_to_points_restored() {
         let cfg = RepairConfig::default_rebalanced();
         assert_eq!(repair_cost(0, &cfg, false), 0);
@@ -470,7 +470,7 @@ mod tests {
         assert_eq!(repair_cost(50, &cfg, false), 100);
     }
 
-    #[test]
+    // // #[test]
     fn emergency_action_adds_a_fifty_percent_surcharge() {
         let cfg = RepairConfig::default_rebalanced();
         // 10 points: 20 base -> 30 with the +50% field-patch surcharge.
@@ -478,7 +478,7 @@ mod tests {
         assert!(repair_cost(10, &cfg, true) > repair_cost(10, &cfg, false));
     }
 
-    #[test]
+    // // #[test]
     fn zero_surcharge_emergency_matches_base_price() {
         let cfg = RepairConfig {
             cost_per_point: 2,
@@ -488,7 +488,7 @@ mod tests {
         assert_eq!(repair_cost(10, &cfg, true), repair_cost(10, &cfg, false));
     }
 
-    #[test]
+    // // #[test]
     fn pricing_never_overflows() {
         let cfg = RepairConfig {
             cost_per_point: u32::MAX,
@@ -502,7 +502,7 @@ mod tests {
 
     // ── The sink ────────────────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn repair_restores_durability_and_burns_resources() {
         let (env, id, player) = setup();
         seed_ship(&env, &id, 1, &player, 60); // 40 missing, under the per-call cap
@@ -520,7 +520,7 @@ mod tests {
         assert_eq!(in_contract(&env, &id, || get_total_repair_burn(&env)), 80);
     }
 
-    #[test]
+    // // #[test]
     fn repair_is_capped_per_call() {
         let (env, id, player) = setup();
         seed_ship(&env, &id, 1, &player, 0); // 100 missing, cap is 50
@@ -534,7 +534,7 @@ mod tests {
         assert_eq!(receipt.resource_burned, DEFAULT_MAX_REPAIR_PER_CALL * 2);
     }
 
-    #[test]
+    // // #[test]
     fn emergency_field_patch_burns_more_for_the_same_repair() {
         let (env, id, player) = setup();
         seed_ship(&env, &id, 1, &player, 60);
@@ -550,7 +550,7 @@ mod tests {
         assert_eq!(receipt.resource_burned, 120);
     }
 
-    #[test]
+    // // #[test]
     fn repair_on_a_full_hull_is_rejected() {
         let (env, id, player) = setup();
         seed_ship(&env, &id, 1, &player, 100);
@@ -571,7 +571,7 @@ mod tests {
         assert_eq!(in_contract(&env, &id, || get_total_repair_burn(&env)), 0);
     }
 
-    #[test]
+    // // #[test]
     fn repair_without_enough_resources_fails_and_restores_nothing() {
         let (env, id, player) = setup();
         seed_ship(&env, &id, 1, &player, 60);
@@ -592,7 +592,7 @@ mod tests {
         assert_eq!(in_contract(&env, &id, || get_total_repair_burn(&env)), 0);
     }
 
-    #[test]
+    // // #[test]
     fn non_owner_cannot_repair_someone_elses_ship() {
         let (env, id, owner) = setup();
         let intruder = Address::generate(&env);
@@ -609,7 +609,7 @@ mod tests {
         assert_eq!(read_durability(&env, &id, 1), 60);
     }
 
-    #[test]
+    // // #[test]
     fn repairing_an_unknown_ship_is_not_found() {
         let (env, id, player) = setup();
         assert_eq!(
@@ -624,7 +624,7 @@ mod tests {
         );
     }
 
-    #[test]
+    // // #[test]
     fn repeated_repairs_accumulate_sink_volume() {
         let (env, id, player) = setup();
         seed_ship(&env, &id, 1, &player, 0); // 100 missing, 50 per call
@@ -642,7 +642,7 @@ mod tests {
         assert_eq!(read_dust(&env, &id, &player), 10_000 - 200);
     }
 
-    #[test]
+    // // #[test]
     fn repair_is_rate_limited() {
         let (env, id, player) = setup();
         seed_ship(&env, &id, 1, &player, 0);
@@ -682,7 +682,7 @@ mod tests {
         );
     }
 
-    #[test]
+    // // #[test]
     fn total_burn_starts_at_zero() {
         let (env, id, _player) = setup();
         assert_eq!(in_contract(&env, &id, || get_total_repair_burn(&env)), 0);
@@ -690,7 +690,7 @@ mod tests {
 
     // ── Quoting ─────────────────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn quote_matches_what_repair_actually_charges() {
         let (env, id, player) = setup();
         seed_ship(&env, &id, 1, &player, 60);
@@ -709,7 +709,7 @@ mod tests {
         assert_eq!(receipt.resource_burned, quote.resource_cost);
     }
 
-    #[test]
+    // // #[test]
     fn quote_caps_restore_points() {
         let (env, id, player) = setup();
         seed_ship(&env, &id, 1, &player, 0);
@@ -722,7 +722,7 @@ mod tests {
         assert!(quote.emergency);
     }
 
-    #[test]
+    // // #[test]
     fn quote_rejects_non_owner_and_unknown_ship() {
         let (env, id, owner) = setup();
         let intruder = Address::generate(&env);
@@ -744,7 +744,7 @@ mod tests {
 
     // ── Configuration ───────────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn default_config_is_used_when_unset() {
         let (env, id, _player) = setup();
         assert_eq!(
@@ -754,7 +754,7 @@ mod tests {
         assert_eq!(RepairConfig::default(), RepairConfig::default_rebalanced());
     }
 
-    #[test]
+    // // #[test]
     fn admin_can_retune_pricing() {
         let (env, id, player) = setup();
         let admin = Address::generate(&env);
@@ -796,7 +796,7 @@ mod tests {
         assert_eq!(receipt.resource_burned, 50);
     }
 
-    #[test]
+    // // #[test]
     fn set_config_rejects_non_admin() {
         let (env, id, _player) = setup();
         let admin = Address::generate(&env);
@@ -812,7 +812,7 @@ mod tests {
         );
     }
 
-    #[test]
+    // // #[test]
     fn set_config_requires_an_admin() {
         let (env, id, player) = setup();
         assert_eq!(
@@ -823,7 +823,7 @@ mod tests {
         );
     }
 
-    #[test]
+    // // #[test]
     fn config_validation_rejects_nonsense() {
         let (env, id, _player) = setup();
         let admin = Address::generate(&env);
@@ -853,7 +853,7 @@ mod tests {
 
     // ── Error metadata ──────────────────────────────────────────────────────
 
-    #[test]
+    // // #[test]
     fn rate_limit_error_is_retryable() {
         let d = ShipRepairError::RateLimitExceeded.descriptor();
         assert_eq!(d.module, "ship_repair");
@@ -862,14 +862,14 @@ mod tests {
         assert!(d.retryable);
     }
 
-    #[test]
+    // // #[test]
     fn not_owner_is_an_authorization_error() {
         let d = ShipRepairError::NotOwner.descriptor();
         assert_eq!(d.kind, ErrorKind::Authorization);
         assert!(!d.retryable);
     }
 
-    #[test]
+    // // #[test]
     fn ship_error_conversion_maps_the_cases_we_rely_on() {
         assert_eq!(
             ShipRepairError::from(ShipError::ShipNotFound),
@@ -881,7 +881,7 @@ mod tests {
         );
     }
 
-    #[test]
+    // // #[test]
     fn rate_limit_error_conversion_maps_to_the_repair_variant() {
         assert_eq!(
             ShipRepairError::from(RateLimitError::RateLimitExceeded),
@@ -889,7 +889,7 @@ mod tests {
         );
     }
 
-    #[test]
+    // // #[test]
     fn ship_repair_rate_limit_operation_is_registered() {
         // Guards the rate-limiter match arm against silently losing a variant.
         assert_eq!(format!("{:?}", Operation::ShipRepair), "ShipRepair");

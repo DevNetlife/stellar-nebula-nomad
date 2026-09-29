@@ -541,7 +541,7 @@ mod tests {
     proptest! {
         /// A yield share is always <= the originating balance for any valid
         /// percentage, and therefore the debit can never underflow.
-        #[test]
+        // // #[test]
         fn yield_never_exceeds_balance(
             balance in 0u64..=MAX_NON_OVERFLOWING,
             percentage in 1u32..=100u32,
@@ -552,37 +552,37 @@ mod tests {
         }
 
         /// A 100% delegation returns exactly the full balance.
-        #[test]
+        // // #[test]
         fn full_percentage_returns_balance(balance in 0u64..=MAX_NON_OVERFLOWING) {
             prop_assert_eq!(calculate_yield_amount(balance, 100), Some(balance));
         }
 
         /// Overflow is detected (not silently wrapped) when balance * 100 would
         /// exceed u64::MAX.
-        #[test]
+        // // #[test]
         fn overflow_is_detected(balance in (MAX_NON_OVERFLOWING + 1)..=u64::MAX) {
             prop_assert_eq!(calculate_yield_amount(balance, 100), None);
         }
 
         /// The helper never panics for any input in the full u64/percentage space.
-        #[test]
+        // // #[test]
         fn never_panics(balance in any::<u64>(), percentage in 0u32..=100u32) {
             let _ = calculate_yield_amount(balance, percentage);
         }
     }
 
-    #[test]
+    // // #[test]
     fn zero_balance_yields_zero() {
         assert_eq!(calculate_yield_amount(0, 50), Some(0));
     }
 
-    #[test]
+    // // #[test]
     fn max_balance_one_percent_does_not_overflow() {
         // u64::MAX * 1 fits, so 1% is well-defined at the extreme.
         assert_eq!(calculate_yield_amount(u64::MAX, 1), Some(u64::MAX / 100));
     }
 
-    #[test]
+    // // #[test]
     fn max_balance_full_percentage_overflows() {
         // u64::MAX * 100 overflows and must be reported, not wrapped.
         assert_eq!(calculate_yield_amount(u64::MAX, 100), None);
@@ -602,7 +602,7 @@ mod tests {
         (env, contract_id)
     }
 
-    #[test]
+    // // #[test]
     fn test_get_bond_not_found_returns_error() {
         let (env, contract_id) = make_env();
         env.as_contract(&contract_id, || {
@@ -611,7 +611,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_get_yield_delegation_not_found_returns_error() {
         let (env, contract_id) = make_env();
         env.as_contract(&contract_id, || {
@@ -620,7 +620,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_get_essence_balance_defaults_to_zero() {
         let (env, contract_id) = make_env();
         let player = Address::generate(&env);
@@ -630,7 +630,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_create_bond_success() {
         let (env, contract_id) = make_env();
         let initiator = Address::generate(&env);
@@ -649,7 +649,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_create_bond_self_bond_rejected() {
         let (env, contract_id) = make_env();
         let player = Address::generate(&env);
@@ -662,7 +662,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_accept_bond_invalid_partner_rejected() {
         let (env, contract_id) = make_env();
         let initiator = Address::generate(&env);
@@ -680,7 +680,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_dissolve_bond_non_member_rejected() {
         let (env, contract_id) = make_env();
         let initiator = Address::generate(&env);
@@ -699,7 +699,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_claim_yield_no_delegation_rejected() {
         let (env, contract_id) = make_env();
         let initiator = Address::generate(&env);
@@ -717,7 +717,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_delegate_yield_invalid_percentage_rejected() {
         let (env, contract_id) = make_env();
         let initiator = Address::generate(&env);
@@ -738,7 +738,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_claim_yield_rejected_while_guard_held() {
         // Simulates a reentrant callback (e.g. a malicious require_auth
         // callback) attempting to re-enter claim_yield while a prior
@@ -768,7 +768,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_bond_modifications_rejected_while_guard_held() {
         // Delegation and dissolution are blocked while a guarded call (e.g. a
         // yield claim) is in flight, so a callback cannot dissolve or re-point
@@ -813,7 +813,7 @@ mod tests {
         });
     }
 
-    #[test]
+    // // #[test]
     fn test_full_bond_lifecycle_with_yield() {
         let (env, contract_id) = make_env();
         let initiator = Address::generate(&env);

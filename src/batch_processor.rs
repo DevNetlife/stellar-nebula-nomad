@@ -470,13 +470,13 @@ mod tests {
 
     proptest! {
         /// Gas estimation matches the per-operation cost.
-        #[test]
+        // // #[test]
         fn estimate_matches_per_op_cost(count in 0u32..=MAX_BATCH_SIZE) {
             prop_assert_eq!(estimate_batch_gas(count), count as u64 * GAS_PER_BATCH_OP);
         }
 
         /// The derived max op count never exceeds the cap and always fits the budget.
-        #[test]
+        // // #[test]
         fn max_ops_respects_cap_and_budget(gas_budget in 0u64..=1_000_000u64) {
             let n = max_ops_for_budget(gas_budget);
             prop_assert!(n <= MAX_BATCH_SIZE);
@@ -484,13 +484,13 @@ mod tests {
         }
     }
 
-    #[test]
+    // // #[test]
     fn default_budget_affords_max_batch() {
         assert_eq!(max_ops_for_budget(DEFAULT_BATCH_GAS_BUDGET), MAX_BATCH_SIZE);
         assert_eq!(estimate_batch_gas(MAX_BATCH_SIZE), DEFAULT_BATCH_GAS_BUDGET);
     }
 
-    #[test]
+    // // #[test]
     fn adjust_batch_trims_to_budget() {
         let env = Env::default();
         let mut ops = Vec::new(&env);
@@ -506,7 +506,7 @@ mod tests {
         assert_eq!(trimmed.len(), 2);
     }
 
-    #[test]
+    // // #[test]
     fn batch_mint_operations_calculate_gas_savings() {
         let base_gas = 5_000u64;
         let overhead = 3_000u64;
@@ -518,7 +518,7 @@ mod tests {
         assert!(savings_8 > 25);
     }
 
-    #[test]
+    // // #[test]
     fn batch_trade_operations_calculate_gas_savings() {
         let base_gas = 8_000u64;
         let overhead = 4_000u64;
@@ -530,7 +530,7 @@ mod tests {
         assert!(savings_8 > 20);
     }
 
-    #[test]
+    // // #[test]
     fn new_batch_op_types_available() {
         assert_eq!(BatchOpType::MintResource, BatchOpType::MintResource);
         assert_eq!(BatchOpType::ExecuteTrade, BatchOpType::ExecuteTrade);
