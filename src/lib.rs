@@ -207,6 +207,9 @@ pub use batch_processor::{
     clear_batch, execute_batch, get_player_batch, queue_batch_operation, BatchError, BatchOp,
     BatchOpType, BatchResult, MAX_BATCH_SIZE,
 };
+pub use dex_integration::{
+    buy_offer, cancel_listing, get_open_offers, harvest_and_list, list_at_market, list_resource,
+    sell_to_order, DexFill, DynamicListError, OfferPage, MAX_OFFER_PAGE, MAX_OFFER_SCAN,
 pub use bounty_board::{
     claim_bounty, get_bounty, initialize_bounty_board, post_bounty, set_bounty_expiry, Bounty,
     BountyError, DEFAULT_BOUNTY_EXPIRY, MAX_ACTIVE_BOUNTIES,
@@ -216,10 +219,6 @@ pub use contract_versioning::{
     is_auto_migrate_enabled, migrate_data, set_auto_migrate, MigrationRecord, VersioningError,
     CURRENT_VERSION, MIGRATION_BATCH_SIZE,
 };
-pub use dex_integration::{cancel_listing, harvest_and_list, list_at_market, DynamicListError};
-pub use difficulty_scaler::{
-    apply_scaling_to_layout, calculate_difficulty, DifficultyError, DifficultyResult,
-    RarityWeights, MAX_LEVEL,
 };
 pub use dynamic_pricing::{
     deviation_bps, dynamic_price, ema_step, get_price_state, get_pricing_config,
@@ -1412,6 +1411,56 @@ impl NebulaNomadContract {
         offer_id: u64,
     ) -> Result<dex_integration::DexOffer, dex_integration::HarvestError> {
         dex_integration::cancel_listing(&env, &owner, offer_id)
+    }
+
+    /// List `amount` units of an already-held resource on the DEX.
+    pub fn list_resource(
+        env: Env,
+        seller: Address,
+        resource: Symbol,
+        amount: u32,
+        min_price: i128,
+    ) -> Result<dex_integration::DexOffer, dex_integration::HarvestError> {
+        dex_integration::list_resource(&env, &seller, &resource, amount, min_price)
+    }
+
+    /// Buy `amount` units from a DEX offer, paying at most `max_price` per unit.
+    pub fn buy_offer(
+        env: Env,
+        buyer: Address,
+        offer_id: u64,
+        amount: u32,
+        max_price: i128,
+    ) -> Result<dex_integration::DexFill, dex_integration::HarvestError> {
+        dex_integration::buy_offer(&env, &buyer, offer_id, amount, max_price)
+    }
+
+    /// Sell `amount` units into an open buy limit order, receiving at least
+    /// `min_price` per unit.
+    pub fn sell_to_order(
+        env: Env,
+        seller: Address,
+        order_id: u64,
+        resource: Symbol,
+        amount: u32,
+        min_price: i128,
+    ) -> Result<dex_integration::DexFill, dex_integration::HarvestError> {
+        dex_integration::sell_to_order(&env, &seller, order_id, &resource, amount, min_price)
+    }
+
+    /// Read a DEX offer by ID.
+    pub fn get_dex_offer(env: Env, offer_id: u64) -> Option<dex_integration::DexOffer> {
+        dex_integration::get_offer(&env, offer_id)
+    }
+
+    /// Page through active DEX offers, optionally filtered by resource.
+    pub fn get_open_offers(
+        env: Env,
+        resource: Option<Symbol>,
+        start_after: u64,
+        limit: u32,
+    ) -> dex_integration::OfferPage {
+        dex_integration::get_open_offers(&env, resource.as_ref(), start_after, limit)
     }
 
     // ─── Treasure Vault ───────────────────────────────────────────────────
